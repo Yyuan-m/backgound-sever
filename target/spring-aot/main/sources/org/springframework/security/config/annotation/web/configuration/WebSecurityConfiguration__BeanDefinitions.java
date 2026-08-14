@@ -90,7 +90,7 @@ public class WebSecurityConfiguration__BeanDefinitions {
   }
 
   /**
-   * Get the bean instance supplier for '(inner bean)#194911c1'.
+   * Get the bean instance supplier for '(inner bean)#118cbded'.
    */
   private static BeanInstanceSupplier<Filter> getSpringSecurityFilterChainInnerBeanInstanceSupplier(
       ) {

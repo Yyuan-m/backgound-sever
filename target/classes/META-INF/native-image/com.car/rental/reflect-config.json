@@ -2499,6 +2499,10 @@
         "parameterTypes": [ ]
       },
       {
+        "name": "getEndTime",
+        "parameterTypes": [ ]
+      },
+      {
         "name": "getId",
         "parameterTypes": [ ]
       },
@@ -2512,6 +2516,10 @@
       },
       {
         "name": "getSortOrder",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getStartTime",
         "parameterTypes": [ ]
       },
       {
@@ -2532,6 +2540,12 @@
         "name": "setDescription",
         "parameterTypes": [
           "java.lang.String"
+        ]
+      },
+      {
+        "name": "setEndTime",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
         ]
       },
       {
@@ -2556,6 +2570,12 @@
         "name": "setSortOrder",
         "parameterTypes": [
           "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setStartTime",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
         ]
       },
       {
@@ -2740,6 +2760,83 @@
     ]
   },
   {
+    "name": "com.car.rental.entity.City",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "getCreatedAt",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getId",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getIsDelete",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getName",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getSort",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getStatus",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getUpdatedAt",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "setCreatedAt",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
+        ]
+      },
+      {
+        "name": "setId",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "setIsDelete",
+        "parameterTypes": [
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setSort",
+        "parameterTypes": [
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setStatus",
+        "parameterTypes": [
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setUpdatedAt",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
+        ]
+      }
+    ]
+  },
+  {
     "name": "com.car.rental.entity.CostRecord",
     "allDeclaredFields": true,
     "allDeclaredConstructors": true,
@@ -2910,6 +3007,10 @@
         "parameterTypes": [ ]
       },
       {
+        "name": "getStackable",
+        "parameterTypes": [ ]
+      },
+      {
         "name": "getStatus",
         "parameterTypes": [ ]
       },
@@ -3053,6 +3154,12 @@
         "name": "setRemark",
         "parameterTypes": [
           "java.lang.String"
+        ]
+      },
+      {
+        "name": "setStackable",
+        "parameterTypes": [
+          "java.lang.Integer"
         ]
       },
       {
@@ -4509,6 +4616,113 @@
         "name": "setStatus",
         "parameterTypes": [
           "java.lang.String"
+        ]
+      },
+      {
+        "name": "setUpdatedAt",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "com.car.rental.entity.Store",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "methods": [
+      {
+        "name": "getAddress",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getCityId",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getCreatedAt",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getId",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getIsDelete",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getName",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getPhone",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getSort",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getStatus",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "getUpdatedAt",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "setAddress",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setCityId",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "setCreatedAt",
+        "parameterTypes": [
+          "java.time.LocalDateTime"
+        ]
+      },
+      {
+        "name": "setId",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "setIsDelete",
+        "parameterTypes": [
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setName",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setPhone",
+        "parameterTypes": [
+          "java.lang.String"
+        ]
+      },
+      {
+        "name": "setSort",
+        "parameterTypes": [
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "setStatus",
+        "parameterTypes": [
+          "java.lang.Integer"
         ]
       },
       {
@@ -6649,6 +6863,7 @@
           "java.lang.String",
           "java.lang.String",
           "java.lang.String",
+          "java.lang.Integer",
           "java.lang.Integer"
         ]
       },
@@ -6660,6 +6875,12 @@
       },
       {
         "name": "listReceiveRecords",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "listUsedOrders",
         "parameterTypes": [
           "java.lang.Long"
         ]
@@ -6860,6 +7081,7 @@
           "com.car.rental.module.marketing.mapper.CouponMapper",
           "com.car.rental.module.marketing.mapper.CouponCarMapper",
           "com.car.rental.module.marketing.mapper.MemberCouponMapper",
+          "com.car.rental.mapper.CustomerOrderMapper",
           "com.car.rental.common.util.SecurityUtil"
         ]
       }
@@ -6915,7 +7137,8 @@
         "parameterTypes": [
           "com.car.rental.module.marketing.mapper.CouponMapper",
           "com.car.rental.module.marketing.mapper.MemberCouponMapper",
-          "com.car.rental.module.marketing.mapper.CouponCarMapper"
+          "com.car.rental.module.marketing.mapper.CouponCarMapper",
+          "com.car.rental.mapper.CustomerOrderMapper"
         ]
       }
     ]
@@ -6968,6 +7191,10 @@
           "java.lang.Long",
           "java.lang.String"
         ]
+      },
+      {
+        "name": "statusCount",
+        "parameterTypes": [ ]
       },
       {
         "name": "update",
@@ -7627,6 +7854,130 @@
   {
     "name": "com.car.rental.module.statistics.service.StatisticsService",
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "com.car.rental.module.store.controller.StoreConfigController",
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredMethods": true,
+    "methods": [
+      {
+        "name": "addCity",
+        "parameterTypes": [
+          "com.car.rental.entity.City"
+        ]
+      },
+      {
+        "name": "addStore",
+        "parameterTypes": [
+          "com.car.rental.entity.Store"
+        ]
+      },
+      {
+        "name": "cityList",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "deleteCity",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "deleteStore",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "publicCityStoreTree",
+        "parameterTypes": [ ]
+      },
+      {
+        "name": "storeList",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      },
+      {
+        "name": "toggleCityStatus",
+        "parameterTypes": [
+          "java.lang.Long",
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "toggleStoreStatus",
+        "parameterTypes": [
+          "java.lang.Long",
+          "java.lang.Integer"
+        ]
+      },
+      {
+        "name": "updateCity",
+        "parameterTypes": [
+          "java.lang.Long",
+          "com.car.rental.entity.City"
+        ]
+      },
+      {
+        "name": "updateStore",
+        "parameterTypes": [
+          "java.lang.Long",
+          "com.car.rental.entity.Store"
+        ]
+      }
+    ],
+    "queriedMethods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "com.car.rental.module.store.service.StoreConfigService"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "com.car.rental.module.store.controller.StoreConfigController$$SpringCGLIB$$0",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.car.rental.module.store.service.impl.StoreConfigServiceImpl",
+    "queryAllPublicMethods": true,
+    "queryAllDeclaredMethods": true,
+    "allPublicMethods": true,
+    "allDeclaredMethods": true,
+    "methods": [
+      {
+        "name": "deleteCity",
+        "parameterTypes": [
+          "java.lang.Long"
+        ]
+      }
+    ],
+    "queriedMethods": [
+      {
+        "name": "<init>",
+        "parameterTypes": [
+          "com.car.rental.module.store.mapper.CityMapper",
+          "com.car.rental.module.store.mapper.StoreMapper"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "com.car.rental.module.store.service.impl.StoreConfigServiceImpl$$SpringCGLIB$$0",
+    "allDeclaredFields": true,
+    "allDeclaredConstructors": true,
+    "allDeclaredMethods": true
+  },
+  {
+    "name": "com.car.rental.module.store.service.StoreConfigService",
+    "queryAllPublicMethods": true,
+    "allDeclaredMethods": true
   },
   {
     "name": "com.car.rental.module.system.controller.AnnouncementController",
@@ -15976,7 +16327,7 @@
       {
         "name": "setDefaultProperties",
         "parameterTypes": [
-          "java.util.Map"
+          "java.util.Properties"
         ]
       },
       {

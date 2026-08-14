@@ -13,7 +13,14 @@ import java.time.LocalDateTime;
 
 /**
  * 优惠券主表（券模板）
- * 状态流转：draft 草稿 → published 已投放 → offline 已下线
+ * status 持久化运营状态：draft 草稿 / published 已投放 / offline 已下线
+ * 业务状态（查询时动态计算，不持久化）：
+ *   - draft        草稿（运营未投放）
+ *   - pending      待生效（已投放但 valid_start_time > now）
+ *   - published    已投放（正常可用）
+ *   - sold_out     已领完（received_count >= total_count，且 total_count != -1）
+ *   - expired      已过期（valid_end_time < now）
+ *   - offline      已下线（运营主动下线）
  * published=0 未确认投放 / 1 已确认投放（防止运营误发）
  */
 @Data
@@ -56,6 +63,9 @@ public class Coupon {
 
     /** 适用范围 all全场通用/specified指定车辆 */
     private String applyScope;
+
+    /** 是否可叠加使用 0不可叠加/1可叠加 */
+    private Integer stackable;
 
     private LocalDateTime validStartTime;
 

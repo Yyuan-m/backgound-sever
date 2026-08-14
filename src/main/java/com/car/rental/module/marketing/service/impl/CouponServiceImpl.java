@@ -7,7 +7,9 @@ import com.car.rental.common.exception.BusinessException;
 import com.car.rental.common.util.SecurityUtil;
 import com.car.rental.entity.Coupon;
 import com.car.rental.entity.CouponCar;
+import com.car.rental.entity.CustomerOrder;
 import com.car.rental.entity.MemberCoupon;
+import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.module.marketing.mapper.CouponCarMapper;
 import com.car.rental.module.marketing.mapper.CouponMapper;
 import com.car.rental.module.marketing.mapper.MemberCouponMapper;
@@ -21,7 +23,10 @@ import org.springframework.util.StringUtils;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -32,28 +37,93 @@ public class CouponServiceImpl implements CouponService {
     private final CouponMapper couponMapper;
     private final CouponCarMapper couponCarMapper;
     private final MemberCouponMapper memberCouponMapper;
+    private final CustomerOrderMapper customerOrderMapper;
     private final SecurityUtil securityUtil;
 
     private static final List<String> VALID_TYPES = Arrays.asList("discount", "deduction", "duration");
     private static final List<String> VALID_SCOPES = Arrays.asList("all", "specified");
 
+    /** 业务状态枚举（动态计算得出，非持久化） */
+    private static final String STATUS_DRAFT = "draft";
+    private static final String STATUS_PENDING = "pending";
+    private static final String STATUS_PUBLISHED = "published";
+    private static final String STATUS_SOLD_OUT = "sold_out";
+    private static final String STATUS_EXPIRED = "expired";
+    private static final String STATUS_OFFLINE = "offline";
+
+    /** 需要动态计算的派生状态（查询时过滤需要内存过滤） */
+    private static final java.util.Set<String> DYNAMIC_STATUSES = java.util.Set.of(
+            STATUS_PENDING, STATUS_PUBLISHED, STATUS_SOLD_OUT, STATUS_EXPIRED);
+
     @Override
-    public IPage<Coupon> getList(long pageNum, long pageSize, String name, String type, String status, Integer published) {
+    public IPage<Coupon> getList(long pageNum, long pageSize, String name, String type, String status, Integer published, Integer stackable) {
         Page<Coupon> page = new Page<>(pageNum, pageSize);
         LambdaQueryWrapper<Coupon> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) wrapper.like(Coupon::getName, name);
         if (StringUtils.hasText(type)) wrapper.eq(Coupon::getType, type);
-        if (StringUtils.hasText(status)) wrapper.eq(Coupon::getStatus, status);
+        if (stackable != null) wrapper.eq(Coupon::getStackable, stackable);
+        // status 过滤策略：
+        //  - draft/offline：直接查持久化字段
+        //  - pending/published/sold_out/expired：先查 status=published（这些是派生状态），再内存过滤
+        if (StringUtils.hasText(status)) {
+            if (DYNAMIC_STATUSES.contains(status)) {
+                wrapper.eq(Coupon::getStatus, STATUS_PUBLISHED);
+            } else {
+                wrapper.eq(Coupon::getStatus, status);
+            }
+        }
         if (published != null) wrapper.eq(Coupon::getPublished, published);
         wrapper.orderByDesc(Coupon::getCreatedAt);
         IPage<Coupon> result = couponMapper.selectPage(page, wrapper);
-        // 填充关联车辆名称（指定车辆券）
+
+        LocalDateTime now = LocalDateTime.now();
+        java.util.List<Coupon> filtered = new java.util.ArrayList<>();
         for (Coupon c : result.getRecords()) {
+            // 填充关联车辆名称
             if ("specified".equals(c.getApplyScope())) {
                 c.setCarNames(couponMapper.selectCarNamesByCouponId(c.getId()));
             }
+            // 动态计算业务状态（覆盖原 status 字段返回给前端）
+            String effectiveStatus = computeEffectiveStatus(c, now);
+            c.setStatus(effectiveStatus);
+            // 内存过滤派生状态
+            if (StringUtils.hasText(status) && DYNAMIC_STATUSES.contains(status) && !status.equals(effectiveStatus)) {
+                continue;
+            }
+            filtered.add(c);
+        }
+        // 重置分页结果（派生状态过滤后总数可能减少）
+        result.setRecords(filtered);
+        if (StringUtils.hasText(status) && DYNAMIC_STATUSES.contains(status)) {
+            // 派生状态过滤后无法精确分页，重算 total（接受轻微性能开销）
+            // 注：此场景下 page 查询已限定 status=published，重新计数代价可控
+            result.setTotal(filtered.size());
         }
         return result;
+    }
+
+    /**
+     * 根据有效期与库存动态计算券的业务状态
+     * 仅当持久化 status=published 时才需要派生，draft/offline 直接返回原值
+     */
+    private String computeEffectiveStatus(Coupon c, LocalDateTime now) {
+        if (!STATUS_PUBLISHED.equals(c.getStatus())) {
+            return c.getStatus(); // draft / offline 直接返回
+        }
+        // 已过有效期 → expired
+        if (c.getValidEndTime() != null && c.getValidEndTime().isBefore(now)) {
+            return STATUS_EXPIRED;
+        }
+        // 未到生效时间 → pending
+        if (c.getValidStartTime() != null && c.getValidStartTime().isAfter(now)) {
+            return STATUS_PENDING;
+        }
+        // 库存领完（-1 表示无限库存，永不售罄）
+        if (c.getTotalCount() != null && c.getTotalCount() != -1
+                && c.getReceivedCount() != null && c.getReceivedCount() >= c.getTotalCount()) {
+            return STATUS_SOLD_OUT;
+        }
+        return STATUS_PUBLISHED;
     }
 
     @Override
@@ -64,6 +134,8 @@ public class CouponServiceImpl implements CouponService {
         }
         coupon.setCarIds(couponMapper.selectCarIdsByCouponId(id));
         coupon.setCarNames(couponMapper.selectCarNamesByCouponId(id));
+        // 详情同样返回动态计算后的业务状态
+        coupon.setStatus(computeEffectiveStatus(coupon, LocalDateTime.now()));
         return coupon;
     }
 
@@ -80,6 +152,7 @@ public class CouponServiceImpl implements CouponService {
         coupon.setUsedCount(0);
         if (coupon.getPerUserLimit() == null) coupon.setPerUserLimit(1);
         if (coupon.getApplyScope() == null) coupon.setApplyScope("all");
+        if (coupon.getStackable() == null) coupon.setStackable(0);
         if (coupon.getVersion() == null) coupon.setVersion(0);
         coupon.setCreatedBy(securityUtil.getCurrentUserId());
         coupon.setCreatedAt(LocalDateTime.now());
@@ -107,6 +180,7 @@ public class CouponServiceImpl implements CouponService {
         existing.setTotalCount(coupon.getTotalCount());
         existing.setPerUserLimit(coupon.getPerUserLimit());
         existing.setApplyScope(coupon.getApplyScope());
+        existing.setStackable(coupon.getStackable());
         existing.setValidStartTime(coupon.getValidStartTime());
         existing.setValidEndTime(coupon.getValidEndTime());
         existing.setRemark(coupon.getRemark());
@@ -196,6 +270,36 @@ public class CouponServiceImpl implements CouponService {
         return memberCouponMapper.selectList(new LambdaQueryWrapper<MemberCoupon>()
                 .eq(MemberCoupon::getCouponId, couponId)
                 .orderByDesc(MemberCoupon::getClaimTime));
+    }
+
+    @Override
+    public Map<String, Object> listUsedOrders(Long couponId) {
+        // 直接查 customer_order 表，通过 coupon_id 关联
+        // 不依赖 coupon 表状态，即使优惠券被删除/到期，订单中的关联关系仍持久存在
+        LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CustomerOrder::getCouponId, couponId)
+                .orderByDesc(CustomerOrder::getCreateTime);
+        List<CustomerOrder> orders = customerOrderMapper.selectList(wrapper);
+
+        // 统计汇总（仅 completed 订单计入优惠金额统计）
+        int totalOrders = orders.size();
+        int completedOrders = 0;
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+        for (CustomerOrder order : orders) {
+            if ("completed".equals(order.getStatus())) {
+                completedOrders++;
+                if (order.getCouponDiscount() != null) {
+                    totalDiscount = totalDiscount.add(order.getCouponDiscount());
+                }
+            }
+        }
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("orders", orders);
+        result.put("totalOrders", totalOrders);
+        result.put("completedOrders", completedOrders);
+        result.put("totalDiscount", totalDiscount);
+        return result;
     }
 
     @Override

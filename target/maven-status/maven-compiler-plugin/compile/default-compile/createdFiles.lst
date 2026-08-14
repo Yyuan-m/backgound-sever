@@ -101,9 +101,12 @@ com\car\rental\module\car\controller\CarMaintenanceController.class
 com\car\rental\module\system\controller\UserController.class
 com\car\rental\entity\Invoice.class
 com\car\rental\module\after_sales\service\AfterSalesComplaintService.class
+com\car\rental\entity\City.class
 com\car\rental\module\auth\controller\AuthController.class
+com\car\rental\module\store\controller\StoreConfigController.class
 com\car\rental\common\security\OperationLogAspect$1.class
 com\car\rental\common\security\PermissionAspect.class
+com\car\rental\module\store\service\impl\StoreConfigServiceImpl.class
 com\car\rental\module\car\controller\GpsTrackController.class
 com\car\rental\module\marketing\service\impl\CouponServiceImpl.class
 com\car\rental\entity\SysUser.class
@@ -118,6 +121,7 @@ com\car\rental\entity\SysRole.class
 com\car\rental\module\marketing\controller\CouponController.class
 com\car\rental\mapper\CustomerInfoMapper.class
 com\car\rental\module\car\service\impl\CarServiceImpl.class
+com\car\rental\entity\Store.class
 com\car\rental\module\auth\service\impl\ProfileServiceImpl.class
 com\car\rental\module\statistics\service\impl\CostServiceImpl.class
 com\car\rental\module\car\service\GpsTrackService.class
@@ -126,6 +130,7 @@ com\car\rental\module\statistics\mapper\CostRecordMapper.class
 com\car\rental\module\auth\service\impl\AuthServiceImpl.class
 com\car\rental\entity\Coupon.class
 com\car\rental\module\car\service\impl\CarDocumentServiceImpl.class
+com\car\rental\module\store\mapper\StoreMapper.class
 com\car\rental\module\system\service\DictService.class
 com\car\rental\module\statistics\controller\InvoiceController.class
 com\car\rental\module\car\mapper\CarImageMapper.class
@@ -140,6 +145,7 @@ com\car\rental\module\auth\controller\ForgotPasswordVerifyDTO.class
 com\car\rental\module\system\controller\DictController.class
 com\car\rental\entity\CarViolation.class
 com\car\rental\module\car\controller\CarDocumentController.class
+com\car\rental\module\store\service\StoreConfigService.class
 com\car\rental\module\statistics\service\impl\FinanceStatsServiceImpl.class
 com\car\rental\mapper\AnnouncementMapper.class
 com\car\rental\common\exception\GlobalExceptionHandler.class
@@ -173,4 +179,5 @@ com\car\rental\module\car\mapper\CarViolationMapper.class
 com\car\rental\entity\CustomerOrder.class
 com\car\rental\entity\CarMaintenance.class
 com\car\rental\module\statistics\service\FinanceStatsService.class
+com\car\rental\module\store\mapper\CityMapper.class
 com\car\rental\module\car\service\CarService.class

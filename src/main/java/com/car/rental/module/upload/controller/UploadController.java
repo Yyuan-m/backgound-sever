@@ -121,9 +121,9 @@ public class UploadController {
             throw new BusinessException("文件上传失败: " + e.getClass().getSimpleName() + " - " + e.getMessage());
         }
 
-        // 构造访问 URL
-        String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
-        String url = baseUrl + "/uploads/" + newFilename;
+        // 构造访问 URL —— 仅返回相对路径（如 /uploads/xxx.jpg）
+        // 由前端根据服务端口（8088/8089）自行拼接 IP 端口，避免数据库存储绝对地址导致 IP 变更后失效
+        String url = "/uploads/" + newFilename;
         String absolutePath = dest.getAbsolutePath();
 
         // 获取上传人信息（优先使用昵称，其次用户名）

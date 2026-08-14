@@ -11,6 +11,8 @@ import com.car.rental.module.order.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/order")
 @RequiredArgsConstructor
@@ -29,6 +31,16 @@ public class OrderController {
             @RequestParam(required = false) String endDate) {
         IPage<CustomerOrder> page = orderService.getOrderList(pageNum, pageSize, keyword, status, startDate, endDate);
         return Result.ok(PageResult.of(page));
+    }
+
+    /**
+     * 按状态统计订单数量（全量，不受分页/筛选条件影响）
+     * 供前端 tab 角标展示
+     */
+    @GetMapping("/status-count")
+    @RequirePermission("order:list")
+    public Result<Map<String, Long>> statusCount() {
+        return Result.ok(orderService.getStatusCount());
     }
 
     @GetMapping("/detail/{id}")

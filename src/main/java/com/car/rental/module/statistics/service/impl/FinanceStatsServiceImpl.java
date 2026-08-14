@@ -34,7 +34,9 @@ import java.util.stream.Collectors;
  * 财务统计聚合实现
  *
  * 设计原则（统一算法，各模块数据一致）：
- * 1. 营收 = finance_record 中 type=rental 的 amount 求和（租金收入）
+ * 1. 营收（净收入）= finance_record 中 type=rental 的 amount 求和
+ *    - 流水 amount = order.total_amount（实付净额，已扣除优惠券折扣 coupon_discount）
+ *    - 净收入 = rent_amount - coupon_discount = total_amount
  * 2. 成本 = cost_record.amount 求和（手工录入的运营/保险成本）
  *          + car_maintenance.cost 求和（维保成本，从车辆维保业务自动派生）
  *          + 车辆租赁成本 = sum(car_info.daily_cost × customer_order.days)（从订单+车辆自动派生）
@@ -94,6 +96,12 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
         overview.put("totalProfit", totalRevenue.subtract(totalCost));
         overview.put("monthProfit", monthRevenue.subtract(monthCost));
         overview.put("yearProfit", yearRevenue.subtract(yearCost));
+
+        // ===== 优惠券已优惠总金额（从 customer_order 聚合，不依赖 coupon 表） =====
+        // 仅统计 completed 且未删除的订单，cancelled 订单的券已释放不算实际优惠
+        overview.put("totalCouponDiscount", sumCouponDiscount(null, null));
+        overview.put("monthCouponDiscount", sumCouponDiscount(monthStart, monthEnd));
+        overview.put("yearCouponDiscount", sumCouponDiscount(yearStart, yearEnd));
 
         return overview;
     }
@@ -246,6 +254,23 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
         return records.stream()
                 .map(r -> r.getAmount() == null ? BigDecimal.ZERO : r.getAmount())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    /**
+     * 求和 customer_order 中的 coupon_discount（仅 completed 且未删除的订单）
+     * 数据源为订单表，不依赖 coupon 表，即使优惠券被删除/到期，订单中的优惠金额仍持久存在
+     */
+    private BigDecimal sumCouponDiscount(LocalDateTime start, LocalDateTime end) {
+        QueryWrapper<CustomerOrder> wrapper = new QueryWrapper<>();
+        wrapper.eq("status", "completed")
+                .gt("coupon_discount", 0);
+        if (start != null && end != null) {
+            wrapper.between("create_time", start, end);
+        }
+        List<Map<String, Object>> list = customerOrderMapper.selectMaps(
+                wrapper.select("IFNULL(SUM(coupon_discount),0) as total"));
+        if (list.isEmpty()) return BigDecimal.ZERO;
+        return toBigDecimal(list.get(0).get("total"));
     }
 
     /** 求和 cost_record 指定时间段的 amount */
@@ -541,7 +566,10 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
         for (CustomerOrder order : orders) {
             if (order.getCarId() == null) continue;
             String type = carTypeMap.getOrDefault(order.getCarId(), "未分类");
-            BigDecimal revenue = order.getRentAmount() == null ? BigDecimal.ZERO : order.getRentAmount();
+            // 净收入 = totalAmount（实付净额，已扣优惠券），为空时回退 rentAmount
+            BigDecimal revenue = order.getTotalAmount() != null
+                    ? order.getTotalAmount()
+                    : (order.getRentAmount() != null ? order.getRentAmount() : BigDecimal.ZERO);
             BigDecimal dailyCost = carCostMap.getOrDefault(order.getCarId(), BigDecimal.ZERO);
             int days = order.getDays() == null ? 0 : order.getDays();
             BigDecimal cost = dailyCost.multiply(BigDecimal.valueOf(days));

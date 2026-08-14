@@ -70,6 +70,8 @@ public class CarouselServiceImpl implements CarouselService {
         existing.setImageUrl(carousel.getImageUrl());
         existing.setLinkUrl(carousel.getLinkUrl());
         existing.setSortOrder(carousel.getSortOrder());
+        existing.setStartTime(carousel.getStartTime());
+        existing.setEndTime(carousel.getEndTime());
         if (carousel.getStatus() != null) {
             existing.setStatus(carousel.getStatus());
         }

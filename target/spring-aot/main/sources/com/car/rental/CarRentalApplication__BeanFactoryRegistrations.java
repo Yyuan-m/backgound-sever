@@ -78,6 +78,10 @@ import com.car.rental.module.statistics.service.impl.FinanceStatsServiceImpl__Be
 import com.car.rental.module.statistics.service.impl.InvoiceServiceImpl__BeanDefinitions;
 import com.car.rental.module.statistics.service.impl.ReconciliationServiceImpl__BeanDefinitions;
 import com.car.rental.module.statistics.service.impl.StatisticsServiceImpl__BeanDefinitions;
+import com.car.rental.module.store.controller.StoreConfigController__BeanDefinitions;
+import com.car.rental.module.store.mapper.CityMapper;
+import com.car.rental.module.store.mapper.StoreMapper;
+import com.car.rental.module.store.service.impl.StoreConfigServiceImpl__BeanDefinitions;
 import com.car.rental.module.system.controller.AnnouncementController__BeanDefinitions;
 import com.car.rental.module.system.controller.CarouselController__BeanDefinitions;
 import com.car.rental.module.system.controller.DictController__BeanDefinitions;
@@ -753,6 +757,50 @@ public class CarRentalApplication__BeanFactoryRegistrations {
   }
 
   /**
+   * Get the bean instance supplier for 'cityMapper'.
+   */
+  private static BeanInstanceSupplier<MapperFactoryBean> getCityMapperInstanceSupplier() {
+    return BeanInstanceSupplier.<MapperFactoryBean>forConstructor(Class.class)
+            .withGenerator((registeredBean, args) -> new MapperFactoryBean(args.get(0)));
+  }
+
+  /**
+   * Get the bean definition for 'cityMapper'.
+   */
+  private static BeanDefinition getCityMapperBeanDefinition() {
+    RootBeanDefinition beanDefinition = new RootBeanDefinition(MapperFactoryBean.class);
+    beanDefinition.setTargetType(ResolvableType.forClass(MapperFactoryBean.class));
+    beanDefinition.setLazyInit(false);
+    beanDefinition.getConstructorArgumentValues().addGenericArgumentValue("com.car.rental.module.store.mapper.CityMapper");
+    beanDefinition.getPropertyValues().addPropertyValue("mapperInterface", CityMapper.class);
+    beanDefinition.getPropertyValues().addPropertyValue("addToConfig", true);
+    beanDefinition.setInstanceSupplier(getCityMapperInstanceSupplier());
+    return beanDefinition;
+  }
+
+  /**
+   * Get the bean instance supplier for 'storeMapper'.
+   */
+  private static BeanInstanceSupplier<MapperFactoryBean> getStoreMapperInstanceSupplier() {
+    return BeanInstanceSupplier.<MapperFactoryBean>forConstructor(Class.class)
+            .withGenerator((registeredBean, args) -> new MapperFactoryBean(args.get(0)));
+  }
+
+  /**
+   * Get the bean definition for 'storeMapper'.
+   */
+  private static BeanDefinition getStoreMapperBeanDefinition() {
+    RootBeanDefinition beanDefinition = new RootBeanDefinition(MapperFactoryBean.class);
+    beanDefinition.setTargetType(ResolvableType.forClass(MapperFactoryBean.class));
+    beanDefinition.setLazyInit(false);
+    beanDefinition.getConstructorArgumentValues().addGenericArgumentValue("com.car.rental.module.store.mapper.StoreMapper");
+    beanDefinition.getPropertyValues().addPropertyValue("mapperInterface", StoreMapper.class);
+    beanDefinition.getPropertyValues().addPropertyValue("addToConfig", true);
+    beanDefinition.setInstanceSupplier(getStoreMapperInstanceSupplier());
+    return beanDefinition;
+  }
+
+  /**
    * Get the bean instance supplier for 'carouselMapper'.
    */
   private static BeanInstanceSupplier<MapperFactoryBean> getCarouselMapperInstanceSupplier() {
@@ -918,6 +966,8 @@ public class CarRentalApplication__BeanFactoryRegistrations {
     beanFactory.registerBeanDefinition("invoiceServiceImpl", InvoiceServiceImpl__BeanDefinitions.getInvoiceServiceImplBeanDefinition());
     beanFactory.registerBeanDefinition("reconciliationServiceImpl", ReconciliationServiceImpl__BeanDefinitions.getReconciliationServiceImplBeanDefinition());
     beanFactory.registerBeanDefinition("statisticsServiceImpl", StatisticsServiceImpl__BeanDefinitions.getStatisticsServiceImplBeanDefinition());
+    beanFactory.registerBeanDefinition("storeConfigController", StoreConfigController__BeanDefinitions.getStoreConfigControllerBeanDefinition());
+    beanFactory.registerBeanDefinition("storeConfigServiceImpl", StoreConfigServiceImpl__BeanDefinitions.getStoreConfigServiceImplBeanDefinition());
     beanFactory.registerBeanDefinition("announcementController", AnnouncementController__BeanDefinitions.getAnnouncementControllerBeanDefinition());
     beanFactory.registerBeanDefinition("carouselController", CarouselController__BeanDefinitions.getCarouselControllerBeanDefinition());
     beanFactory.registerBeanDefinition("dictController", DictController__BeanDefinitions.getDictControllerBeanDefinition());
@@ -1240,6 +1290,8 @@ public class CarRentalApplication__BeanFactoryRegistrations {
     beanFactory.registerBeanDefinition("costRecordMapper", getCostRecordMapperBeanDefinition());
     beanFactory.registerBeanDefinition("invoiceMapper", getInvoiceMapperBeanDefinition());
     beanFactory.registerBeanDefinition("reconciliationMapper", getReconciliationMapperBeanDefinition());
+    beanFactory.registerBeanDefinition("cityMapper", getCityMapperBeanDefinition());
+    beanFactory.registerBeanDefinition("storeMapper", getStoreMapperBeanDefinition());
     beanFactory.registerBeanDefinition("carouselMapper", getCarouselMapperBeanDefinition());
     beanFactory.registerBeanDefinition("operationLogMapper", getOperationLogMapperBeanDefinition());
     beanFactory.registerBeanDefinition("sysDictDataMapper", getSysDictDataMapperBeanDefinition());

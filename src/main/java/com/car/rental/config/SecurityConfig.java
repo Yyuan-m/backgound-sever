@@ -35,7 +35,8 @@ public class SecurityConfig {
                                 "/api/auth/refresh",
                                 "/api/auth/forgot-password/**",
                                 "/api/upload/**",
-                                "/uploads/**"
+                                "/uploads/**",
+                                "/api/public/**"
                         ).permitAll()
                         .anyRequest().authenticated())
                 // 异常处理：区分“未认证(401)”与“权限不足(403)”

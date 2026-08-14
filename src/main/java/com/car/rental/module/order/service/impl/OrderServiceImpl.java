@@ -24,6 +24,9 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -59,6 +62,31 @@ public class OrderServiceImpl implements OrderService {
         }
         wrapper.orderByDesc(CustomerOrder::getCreateTime);
         return customerOrderMapper.selectPage(page, wrapper);
+    }
+
+    /**
+     * 按状态统计订单数量（全量，不受分页/筛选条件影响）
+     * 使用原生 SQL 避免 MyBatis-Plus QueryWrapper 在 selectMaps + 聚合函数场景下
+     * 的解析差异（特别是 @TableLogic 是否自动追加 is_delete 条件的行为不确定）
+     */
+    @Override
+    public Map<String, Long> getStatusCount() {
+        List<Map<String, Object>> rows = customerOrderMapper.selectStatusCount();
+        Map<String, Long> result = new HashMap<>();
+        if (rows == null || rows.isEmpty()) {
+            return result;
+        }
+        for (Map<String, Object> row : rows) {
+            Object statusVal = row.get("status");
+            Object cntVal = row.get("cnt");
+            if (statusVal == null || cntVal == null) continue;
+            try {
+                result.put(String.valueOf(statusVal), ((Number) cntVal).longValue());
+            } catch (ClassCastException e) {
+                log.warn("订单状态统计值类型转换失败: status={}, cnt={}", statusVal, cntVal);
+            }
+        }
+        return result;
     }
 
     @Override
@@ -135,23 +163,28 @@ public class OrderServiceImpl implements OrderService {
 
     /**
      * 自动生成财务流水（订单完成时调用）
-     * 1. rental 收入流水：amount = rent_amount（订单金额）
+     * 1. rental 收入流水：amount = total_amount（实付净额，已扣除优惠券折扣）
+     *    - 净收入 = rent_amount - coupon_discount = total_amount
+     *    - 若 total_amount 为空则回退使用 rent_amount
      * 2. rental_cost 支出流水：amount = daily_cost × days（车辆租赁成本）
      * 幂等设计：按 order_no + type 查询，已存在则跳过
      */
     private void autoGenerateFinanceRecords(CustomerOrder order) {
         LocalDateTime now = LocalDateTime.now();
-        // 1. 收入流水（rental）
+        // 1. 收入流水（rental）—— 使用实付净额（totalAmount），扣除优惠券
         LambdaQueryWrapper<FinanceRecord> rentalWrapper = new LambdaQueryWrapper<>();
         rentalWrapper.eq(FinanceRecord::getOrderNo, order.getOrderNo())
                 .eq(FinanceRecord::getType, "rental");
         if (financeRecordMapper.selectCount(rentalWrapper) == 0) {
+            BigDecimal netAmount = order.getTotalAmount() != null
+                    ? order.getTotalAmount()
+                    : order.getRentAmount();
             FinanceRecord income = new FinanceRecord();
             income.setType("rental");
             income.setTypeName("租金收入");
             income.setOrderNo(order.getOrderNo());
             income.setCustomerName(order.getContactName());
-            income.setAmount(order.getRentAmount());
+            income.setAmount(netAmount);
             income.setMethod("系统自动");
             income.setStatus("completed");
             income.setCreatedAt(now);

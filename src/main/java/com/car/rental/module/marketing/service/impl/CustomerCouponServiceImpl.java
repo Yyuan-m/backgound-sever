@@ -1,10 +1,13 @@
 package com.car.rental.module.marketing.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.car.rental.common.exception.BusinessException;
 import com.car.rental.entity.Coupon;
 import com.car.rental.entity.CouponCar;
+import com.car.rental.entity.CustomerOrder;
 import com.car.rental.entity.MemberCoupon;
+import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.module.marketing.mapper.CouponCarMapper;
 import com.car.rental.module.marketing.mapper.CouponMapper;
 import com.car.rental.module.marketing.mapper.MemberCouponMapper;
@@ -30,6 +33,7 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
     private final CouponMapper couponMapper;
     private final MemberCouponMapper memberCouponMapper;
     private final CouponCarMapper couponCarMapper;
+    private final CustomerOrderMapper customerOrderMapper;
 
     @Override
     public List<Coupon> listAvailable() {
@@ -198,6 +202,14 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
         }
         // coupon.used_count++（原子）
         couponMapper.incrUsedCount(mc.getCouponId());
+
+        // 回写 customer_order.coupon_id（修复历史设计缺陷：原 addOrder 不保证回写 coupon_id）
+        // 同一事务内，跨库 UPDATE 由 Spring 统一管理（同 MySQL 实例下两库）
+        if (orderId != null && mc.getCouponId() != null) {
+            customerOrderMapper.update(null, new LambdaUpdateWrapper<CustomerOrder>()
+                    .eq(CustomerOrder::getId, orderId)
+                    .set(CustomerOrder::getCouponId, mc.getCouponId()));
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.car.rental.module.marketing.service.impl;
 
 import com.car.rental.common.util.SecurityUtil;
+import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.module.marketing.mapper.CouponCarMapper;
 import com.car.rental.module.marketing.mapper.CouponMapper;
 import com.car.rental.module.marketing.mapper.MemberCouponMapper;
@@ -18,8 +19,8 @@ public class CouponServiceImpl__BeanDefinitions {
    * Get the bean instance supplier for 'couponServiceImpl'.
    */
   private static BeanInstanceSupplier<CouponServiceImpl> getCouponServiceImplInstanceSupplier() {
-    return BeanInstanceSupplier.<CouponServiceImpl>forConstructor(CouponMapper.class, CouponCarMapper.class, MemberCouponMapper.class, SecurityUtil.class)
-            .withGenerator((registeredBean, args) -> new CouponServiceImpl(args.get(0), args.get(1), args.get(2), args.get(3)));
+    return BeanInstanceSupplier.<CouponServiceImpl>forConstructor(CouponMapper.class, CouponCarMapper.class, MemberCouponMapper.class, CustomerOrderMapper.class, SecurityUtil.class)
+            .withGenerator((registeredBean, args) -> new CouponServiceImpl(args.get(0), args.get(1), args.get(2), args.get(3), args.get(4)));
   }
 
   /**

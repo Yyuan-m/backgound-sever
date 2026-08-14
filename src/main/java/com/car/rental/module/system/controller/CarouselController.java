@@ -51,7 +51,8 @@ public class CarouselController {
         ignoreFields = {"createdAt"},
         fieldLabels = {
             "title:标题", "description:描述", "imageUrl:图片地址",
-            "linkUrl:跳转链接", "sortOrder:排序", "status:状态"
+            "linkUrl:跳转链接", "sortOrder:排序", "status:状态",
+            "startTime:上架时间", "endTime:下架时间"
         }
     )
     public Result<?> add(@RequestBody Carousel carousel) {
@@ -67,7 +68,8 @@ public class CarouselController {
         ignoreFields = {"createdAt"},
         fieldLabels = {
             "title:标题", "description:描述", "imageUrl:图片地址",
-            "linkUrl:跳转链接", "sortOrder:排序", "status:状态"
+            "linkUrl:跳转链接", "sortOrder:排序", "status:状态",
+            "startTime:上架时间", "endTime:下架时间"
         }
     )
     public Result<?> update(@RequestBody Carousel carousel) {
@@ -84,7 +86,8 @@ public class CarouselController {
         ignoreFields = {"createdAt"},
         fieldLabels = {
             "title:标题", "description:描述", "imageUrl:图片地址",
-            "linkUrl:跳转链接", "sortOrder:排序", "status:状态"
+            "linkUrl:跳转链接", "sortOrder:排序", "status:状态",
+            "startTime:上架时间", "endTime:下架时间"
         }
     )
     public Result<?> delete(@PathVariable Long id) {

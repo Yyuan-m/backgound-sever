@@ -27,7 +27,7 @@ public class CouponController {
             "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
             "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
             "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-            "perUserLimit:每人限领", "applyScope:适用范围",
+            "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
             "validStartTime:生效时间", "validEndTime:失效时间",
             "status:状态", "published:确认投放标志", "publishedAt:投放时间",
             "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -41,8 +41,9 @@ public class CouponController {
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Integer published) {
-        IPage<Coupon> page = couponService.getList(pageNum, pageSize, name, type, status, published);
+            @RequestParam(required = false) Integer published,
+            @RequestParam(required = false) Integer stackable) {
+        IPage<Coupon> page = couponService.getList(pageNum, pageSize, name, type, status, published, stackable);
         return Result.ok(PageResult.of(page));
     }
 
@@ -63,7 +64,7 @@ public class CouponController {
                     "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
                     "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
                     "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-                    "perUserLimit:每人限领", "applyScope:适用范围",
+                    "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
                     "validStartTime:生效时间", "validEndTime:失效时间",
                     "status:状态", "published:确认投放标志", "publishedAt:投放时间",
                     "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -84,7 +85,7 @@ public class CouponController {
                     "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
                     "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
                     "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-                    "perUserLimit:每人限领", "applyScope:适用范围",
+                    "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
                     "validStartTime:生效时间", "validEndTime:失效时间",
                     "status:状态", "published:确认投放标志", "publishedAt:投放时间",
                     "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -106,7 +107,7 @@ public class CouponController {
                     "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
                     "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
                     "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-                    "perUserLimit:每人限领", "applyScope:适用范围",
+                    "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
                     "validStartTime:生效时间", "validEndTime:失效时间",
                     "status:状态", "published:确认投放标志", "publishedAt:投放时间",
                     "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -128,7 +129,7 @@ public class CouponController {
                     "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
                     "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
                     "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-                    "perUserLimit:每人限领", "applyScope:适用范围",
+                    "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
                     "validStartTime:生效时间", "validEndTime:失效时间",
                     "status:状态", "published:确认投放标志", "publishedAt:投放时间",
                     "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -150,7 +151,7 @@ public class CouponController {
                     "id:ID", "code:券码", "name:优惠券名称", "type:类型", "typeName:类型名称",
                     "value:面值", "minAmount:最低消费", "discountCap:折扣封顶",
                     "totalCount:发放总量", "receivedCount:已领取数量", "usedCount:已核销数量",
-                    "perUserLimit:每人限领", "applyScope:适用范围",
+                    "perUserLimit:每人限领", "applyScope:适用范围", "stackable:是否可叠加",
                     "validStartTime:生效时间", "validEndTime:失效时间",
                     "status:状态", "published:确认投放标志", "publishedAt:投放时间",
                     "publishedBy:投放人", "remark:备注", "createdAt:创建时间"
@@ -189,5 +190,12 @@ public class CouponController {
     @RequirePermission("marketing:coupon")
     public Result<List<MemberCoupon>> listReceiveRecords(@PathVariable Long id) {
         return Result.ok(couponService.listReceiveRecords(id));
+    }
+
+    /** 关联订单（查 customer_order WHERE coupon_id=?，含统计汇总） */
+    @GetMapping("/{id}/used-orders")
+    @RequirePermission("marketing:coupon")
+    public Result<java.util.Map<String, Object>> listUsedOrders(@PathVariable Long id) {
+        return Result.ok(couponService.listUsedOrders(id));
     }
 }

@@ -2,6 +2,7 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\statistics\controller\CostController.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\statistics\service\impl\StatisticsServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\customer\controller\CustomerController.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\store\service\StoreConfigService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\common\annotation\LogChanges.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\SysConfigService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\common\security\JwtTokenFilter.java
@@ -9,6 +10,7 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\entity\GpsTrack.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\config\GlobalCorsConfig.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\config\MybatisPlusConfig.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\store\controller\StoreConfigController.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\impl\OperationLogServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\common\result\Result.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\mapper\CarConfigMapper.java
@@ -18,9 +20,11 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\statistics\controller\ReconciliationController.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\mapper\SysDictDataMapper.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\service\impl\CarServiceImpl.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\store\service\impl\StoreConfigServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\auth\service\AuthService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\entity\SysDictData.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\auth\controller\RegisterDTO.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\entity\City.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\after_sales\service\impl\AfterSalesComplaintServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\controller\CarDocumentController.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\order\service\OrderService.java
@@ -41,6 +45,7 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\OperationLogService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\common\result\PageResult.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\mapper\SysMenuMapper.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\entity\Store.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\impl\UserServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\SysFileService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\service\impl\AnnouncementServiceImpl.java
@@ -119,6 +124,7 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\service\GpsTrackService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\mapper\OperationLogMapper.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\statistics\controller\StatisticsController.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\store\mapper\CityMapper.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\service\CarMaintenanceService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\service\CarDocumentService.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\controller\OperationLogController.java
@@ -128,6 +134,7 @@ C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-serve
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\controller\SysFileController.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\entity\CustomerOrder.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\system\controller\DictController.java
+C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\store\mapper\StoreMapper.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\mapper\CarDocumentMapper.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\car\service\impl\CarMaintenanceServiceImpl.java
 C:\Users\ZhuanZ\Desktop\record\project\react\background\my-first-react-app-server\src\main\java\com\car\rental\module\statistics\mapper\ReconciliationMapper.java
