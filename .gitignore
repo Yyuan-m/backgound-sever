@@ -1,0 +1,10 @@
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# 编译产物与 IDE
+*.class
+.idea/
+*.iml
+.vscode/
+*.log
