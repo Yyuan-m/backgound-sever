@@ -37,6 +37,20 @@ public class AnnouncementServiceImpl implements AnnouncementService {
     }
 
     @Override
+    public IPage<Announcement> getPublicPageList(long pageNum, long pageSize, String priority) {
+        Page<Announcement> page = new Page<>(pageNum, pageSize);
+        LambdaQueryWrapper<Announcement> wrapper = new LambdaQueryWrapper<>();
+        // C 端只返回已发布且未删除的公告（is_delete 由 @TableLogic 自动过滤）
+        wrapper.eq(Announcement::getStatus, 1);
+        if (StringUtils.hasText(priority)) {
+            wrapper.eq(Announcement::getPriority, priority);
+        }
+        // 优先级排序：high > normal > low，同优先级按创建时间倒序
+        wrapper.last("ORDER BY FIELD(priority,'high','normal','low'), created_at DESC");
+        return announcementMapper.selectPage(page, wrapper);
+    }
+
+    @Override
     public Announcement getById(Long id) {
         Announcement announcement = announcementMapper.selectById(id);
         if (announcement == null) {
