@@ -127,4 +127,20 @@ public class OrderController {
         orderService.updateOrderStatus(id, status);
         return Result.ok();
     }
+
+    /**
+     * 手动触发：自动完成到期订单 + 回补缺失财务流水/发票。
+     * 用于应急修复或验证。与定时任务逻辑一致，幂等可重复执行。
+     * 返回 {autoCompleted, backfilled} 两个计数。
+     */
+    @PostMapping("/finance/maintain")
+    @RequirePermission("order:status")
+    public Result<Map<String, Integer>> financeMaintain() {
+        int autoCompleted = orderService.autoCompleteExpiredOrders();
+        int backfilled = orderService.backfillMissingFinanceRecords();
+        Map<String, Integer> result = new java.util.HashMap<>();
+        result.put("autoCompleted", autoCompleted);
+        result.put("backfilled", backfilled);
+        return Result.ok(result);
+    }
 }

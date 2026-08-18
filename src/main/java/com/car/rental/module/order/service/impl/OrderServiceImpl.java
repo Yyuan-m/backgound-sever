@@ -27,6 +27,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -306,5 +309,78 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("订单不存在");
         }
         customerOrderMapper.deleteById(id);
+    }
+
+    /**
+     * 自动完成到期订单：renting 且 end_date < 今天 → completed
+     * 走 updateOrderStatus 流程，确保发票 + 财务流水一并生成。
+     * end_date 当天仍视为租赁中（与 C 端 autoCompleteOrders 一致），次日才自动完成。
+     * 单条失败不阻断其他订单；优惠券核销已幂等（C 端支付时已核销，重复调用安全）。
+     */
+    @Override
+    public int autoCompleteExpiredOrders() {
+        LocalDate today = LocalDate.now();
+        LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CustomerOrder::getStatus, "renting")
+                .lt(CustomerOrder::getEndDate, today);
+        List<CustomerOrder> expired = customerOrderMapper.selectList(wrapper);
+        if (expired.isEmpty()) {
+            return 0;
+        }
+        int count = 0;
+        for (CustomerOrder order : expired) {
+            try {
+                updateOrderStatus(order.getId(), "completed");
+                count++;
+                log.info("订单到期自动完成（管理后台）: orderNo={}, endDate={}",
+                        order.getOrderNo(), order.getEndDate());
+            } catch (Exception e) {
+                log.error("订单到期自动完成失败 orderNo={}: {}", order.getOrderNo(), e.getMessage(), e);
+            }
+        }
+        return count;
+    }
+
+    /**
+     * 回补缺失财务流水 + 发票：扫描 completed 订单中缺少 rental 类型流水的，
+     * 直接补生成（不经过 updateOrderStatus，避免重复触发优惠券核销等副作用）。
+     * 幂等：autoGenerateInvoice / autoGenerateFinanceRecords 内部已按 order_no 去重。
+     */
+    @Override
+    public int backfillMissingFinanceRecords() {
+        // 查询所有 completed 订单
+        LambdaQueryWrapper<CustomerOrder> orderWrapper = new LambdaQueryWrapper<>();
+        orderWrapper.eq(CustomerOrder::getStatus, "completed");
+        List<CustomerOrder> completedOrders = customerOrderMapper.selectList(orderWrapper);
+        if (completedOrders.isEmpty()) {
+            return 0;
+        }
+
+        // 查询所有已有 rental 流水的 order_no（用于判定是否需要回补）
+        LambdaQueryWrapper<FinanceRecord> frWrapper = new LambdaQueryWrapper<>();
+        frWrapper.eq(FinanceRecord::getType, "rental")
+                .select(FinanceRecord::getOrderNo);
+        List<FinanceRecord> existing = financeRecordMapper.selectList(frWrapper);
+        Set<String> orderNoWithRental = existing.stream()
+                .map(FinanceRecord::getOrderNo)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        int count = 0;
+        for (CustomerOrder order : completedOrders) {
+            if (orderNoWithRental.contains(order.getOrderNo())) {
+                continue; // 已有收入流水，跳过
+            }
+            try {
+                autoGenerateInvoice(order);
+                autoGenerateFinanceRecords(order);
+                count++;
+                log.info("回补财务流水: orderNo={}, totalAmount={}, rentAmount={}",
+                        order.getOrderNo(), order.getTotalAmount(), order.getRentAmount());
+            } catch (Exception e) {
+                log.error("回补财务流水失败 orderNo={}: {}", order.getOrderNo(), e.getMessage(), e);
+            }
+        }
+        return count;
     }
 }

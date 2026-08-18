@@ -55,6 +55,9 @@ public class CarInfo {
     /** 日成本价（默认=日租金×0.54，可手动覆盖） */
     private BigDecimal dailyCost;
 
+    /** 起租天数（最小租期，1-180，默认1） */
+    private Integer minRentDays;
+
     private BigDecimal halfDayPrice;
 
     private BigDecimal nightPrice;
