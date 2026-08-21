@@ -1,6 +1,7 @@
 package com.car.rental.module.car.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.car.rental.common.exception.BusinessException;
@@ -31,22 +32,12 @@ public class CarServiceImpl implements CarService {
     @Override
     public PageResult<CarInfo> list(Integer pageNum, Integer pageSize, String keyword, String type, String status) {
         Page<CarInfo> page = new Page<>(pageNum != null ? pageNum : 1, pageSize != null ? pageSize : 10);
-        LambdaQueryWrapper<CarInfo> wrapper = new LambdaQueryWrapper<>();
-
-        if (StringUtils.hasText(keyword)) {
-            wrapper.and(w -> w.like(CarInfo::getName, keyword)
-                    .or().like(CarInfo::getBrand, keyword)
-                    .or().like(CarInfo::getPlateNumber, keyword));
-        }
-        if (StringUtils.hasText(type)) {
-            wrapper.eq(CarInfo::getType, type);
-        }
-        if (StringUtils.hasText(status)) {
-            wrapper.eq(CarInfo::getStatus, status);
-        }
-        wrapper.orderByDesc(CarInfo::getCreatedAt);
-
-        IPage<CarInfo> result = carInfoMapper.selectPage(page, wrapper);
+        // 车辆状态实时计算：存在待支付(pending)/租赁中(renting)订单的车辆显示为 rented，
+        // 不再直接使用 car_info.status 持久化字段（订单流转不回写该字段，直接查会显示错误的"空闲"）
+        String kw = StringUtils.hasText(keyword) ? keyword : null;
+        String tp = StringUtils.hasText(type) ? type : null;
+        String st = StringUtils.hasText(status) ? status : null;
+        IPage<CarInfo> result = carInfoMapper.selectPageWithRealtimeStatus(page, kw, tp, st);
         // 批量填充每辆车的素材数量，便于列表展示
         List<CarInfo> records = result.getRecords();
         if (records != null && !records.isEmpty()) {
@@ -109,6 +100,13 @@ public class CarServiceImpl implements CarService {
         // 日成本价：未手动填写时自动 = 日租金 × 0.54
         calcDailyCostIfAbsent(carInfo);
         carInfoMapper.updateById(carInfo);
+        // 最大租期：updateById 默认忽略 null 字段，若需将"有限制"改回"不限制"，
+        // 需把 max_rent_days 显式置 NULL 覆盖旧值
+        if (carInfo.getMaxRentDays() == null) {
+            LambdaUpdateWrapper<CarInfo> nullWrapper = new LambdaUpdateWrapper<>();
+            nullWrapper.eq(CarInfo::getId, id).set(CarInfo::getMaxRentDays, null);
+            carInfoMapper.update(null, nullWrapper);
+        }
         // 更新车辆时一并保存/更新配置
         saveOrUpdateConfig(id, carInfo.getCarConfig());
     }

@@ -58,6 +58,9 @@ public class CarInfo {
     /** 起租天数（最小租期，1-180，默认1） */
     private Integer minRentDays;
 
+    /** 最大租车天数（NULL=不限制） */
+    private Integer maxRentDays;
+
     private BigDecimal halfDayPrice;
 
     private BigDecimal nightPrice;
