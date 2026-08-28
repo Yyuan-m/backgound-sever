@@ -55,7 +55,7 @@ public interface CustomerInfoMapper extends BaseMapper<CustomerInfo> {
                    m.update_time                                AS updated_at,
                    -- customer_info 特有字段，JOIN 不到时使用默认值
                    ci.id                                        AS customer_id,
-                   COALESCE(ci.real_name_status, 0)             AS real_name_status,
+                   CASE m.verify_status WHEN 'verified' THEN 1 WHEN 'pending' THEN 2 WHEN 'rejected' THEN 3 ELSE COALESCE(ci.real_name_status, 0) END AS real_name_status,
                    COALESCE(ci.discount, 1)                     AS discount,
                    ci.tags                                      AS tags,
                    COALESCE(ci.is_blacklist, 0)                 AS is_blacklist
@@ -66,7 +66,7 @@ public interface CustomerInfoMapper extends BaseMapper<CustomerInfo> {
             LEFT JOIN (
                 SELECT member_id,
                        COUNT(*)                                 AS total_orders,
-                       COALESCE(SUM(rent_amount), 0)            AS total_spent
+                       COALESCE(SUM(total_amount), 0)           AS total_spent
                 FROM customer_order
                 WHERE status = 'completed' AND is_delete = 0
                 GROUP BY member_id
@@ -121,7 +121,7 @@ public interface CustomerInfoMapper extends BaseMapper<CustomerInfo> {
                    m.create_time                                AS created_at,
                    m.update_time                                AS updated_at,
                    ci.id                                        AS customer_id,
-                   COALESCE(ci.real_name_status, 0)             AS real_name_status,
+                   CASE m.verify_status WHEN 'verified' THEN 1 WHEN 'pending' THEN 2 WHEN 'rejected' THEN 3 ELSE COALESCE(ci.real_name_status, 0) END AS real_name_status,
                    COALESCE(ci.discount, 1)                     AS discount,
                    ci.tags                                      AS tags,
                    COALESCE(ci.is_blacklist, 0)                 AS is_blacklist
@@ -132,7 +132,7 @@ public interface CustomerInfoMapper extends BaseMapper<CustomerInfo> {
             LEFT JOIN (
                 SELECT member_id,
                        COUNT(*)                                 AS total_orders,
-                       COALESCE(SUM(rent_amount), 0)            AS total_spent
+                       COALESCE(SUM(total_amount), 0)           AS total_spent
                 FROM customer_order
                 WHERE status = 'completed' AND is_delete = 0
                 GROUP BY member_id
@@ -166,4 +166,49 @@ public interface CustomerInfoMapper extends BaseMapper<CustomerInfo> {
             WHERE id = #{memberId} AND is_delete = 0
             """)
     java.util.Map<String, Object> selectMemberIdCardInfo(@Param("memberId") Long memberId);
+
+    /**
+     * 重算并更新会员等级（跨库，订单完成时调用）。
+     * 规则（累计订单数与累计消费两个维度取较高等级）：
+     *   普通会员：无已完成订单且消费为 0
+     *   银卡会员：0 < 订单数 <= 10 或 0 < 消费 <= 10000
+     *   金卡会员：10 < 订单数 <= 50 或 10000 < 消费 <= 50000
+     *   钻石会员：50 < 订单数 <= 500 或 50000 < 消费 <= 500000
+     *   黑卡会员：订单数 > 500 或消费 > 500000
+     * 统计口径：status='completed' 且 is_delete=0 的 customer_order，
+     * 消费金额为 SUM(total_amount)（实付净额，已扣优惠券）。
+     */
+    @Update("""
+            UPDATE car_rental_customer.member m
+            LEFT JOIN (
+                SELECT member_id,
+                       COUNT(*)                            AS order_cnt,
+                       COALESCE(SUM(total_amount), 0)      AS total_spent
+                FROM car_rental.customer_order
+                WHERE status = 'completed' AND is_delete = 0
+                GROUP BY member_id
+            ) s ON s.member_id = m.id
+            SET m.level = CASE
+                    WHEN COALESCE(s.order_cnt, 0) > 500 OR COALESCE(s.total_spent, 0) > 500000 THEN 'black'
+                    WHEN (COALESCE(s.order_cnt, 0) > 50 AND COALESCE(s.order_cnt, 0) <= 500)
+                      OR (COALESCE(s.total_spent, 0) > 50000 AND COALESCE(s.total_spent, 0) <= 500000) THEN 'diamond'
+                    WHEN (COALESCE(s.order_cnt, 0) > 10 AND COALESCE(s.order_cnt, 0) <= 50)
+                      OR (COALESCE(s.total_spent, 0) > 10000 AND COALESCE(s.total_spent, 0) <= 50000) THEN 'gold'
+                    WHEN (COALESCE(s.order_cnt, 0) > 0 AND COALESCE(s.order_cnt, 0) <= 10)
+                      OR (COALESCE(s.total_spent, 0) > 0 AND COALESCE(s.total_spent, 0) <= 10000) THEN 'silver'
+                    ELSE 'normal'
+                END,
+                m.level_name = CASE
+                    WHEN COALESCE(s.order_cnt, 0) > 500 OR COALESCE(s.total_spent, 0) > 500000 THEN '黑卡会员'
+                    WHEN (COALESCE(s.order_cnt, 0) > 50 AND COALESCE(s.order_cnt, 0) <= 500)
+                      OR (COALESCE(s.total_spent, 0) > 50000 AND COALESCE(s.total_spent, 0) <= 500000) THEN '钻石会员'
+                    WHEN (COALESCE(s.order_cnt, 0) > 10 AND COALESCE(s.order_cnt, 0) <= 50)
+                      OR (COALESCE(s.total_spent, 0) > 10000 AND COALESCE(s.total_spent, 0) <= 50000) THEN '金卡会员'
+                    WHEN (COALESCE(s.order_cnt, 0) > 0 AND COALESCE(s.order_cnt, 0) <= 10)
+                      OR (COALESCE(s.total_spent, 0) > 0 AND COALESCE(s.total_spent, 0) <= 10000) THEN '银卡会员'
+                    ELSE '普通会员'
+                END
+            WHERE m.id = #{memberId}
+            """)
+    int recalcMemberLevel(@Param("memberId") Long memberId);
 }

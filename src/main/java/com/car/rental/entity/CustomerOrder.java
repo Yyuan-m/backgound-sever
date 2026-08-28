@@ -1,12 +1,14 @@
 package com.car.rental.entity;
 
 import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -85,4 +87,8 @@ public class CustomerOrder {
 
     @TableLogic
     private Integer isDelete;
+
+    /** 车辆明细列表（多车，非持久化字段，查询时关联填充） */
+    @TableField(exist = false)
+    private List<CustomerOrderItem> items;
 }

@@ -6,10 +6,13 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.car.rental.common.exception.BusinessException;
 import com.car.rental.entity.CustomerOrder;
+import com.car.rental.entity.CustomerOrderItem;
 import com.car.rental.entity.CarInfo;
 import com.car.rental.entity.FinanceRecord;
 import com.car.rental.mapper.CarInfoMapper;
+import com.car.rental.mapper.CustomerOrderItemMapper;
 import com.car.rental.mapper.CustomerOrderMapper;
+import com.car.rental.mapper.CustomerInfoMapper;
 import com.car.rental.module.marketing.service.CustomerCouponService;
 import com.car.rental.module.order.service.OrderService;
 import com.car.rental.entity.Invoice;
@@ -25,6 +28,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -37,10 +41,12 @@ import java.util.stream.Collectors;
 public class OrderServiceImpl implements OrderService {
 
     private final CustomerOrderMapper customerOrderMapper;
+    private final CustomerOrderItemMapper customerOrderItemMapper;
     private final CustomerCouponService customerCouponService;
     private final InvoiceMapper invoiceMapper;
     private final FinanceRecordMapper financeRecordMapper;
     private final CarInfoMapper carInfoMapper;
+    private final CustomerInfoMapper customerInfoMapper;
 
     @Override
     public IPage<CustomerOrder> getOrderList(long pageNum, long pageSize, String keyword, String status, String startDate, String endDate) {
@@ -64,7 +70,28 @@ public class OrderServiceImpl implements OrderService {
             wrapper.le(CustomerOrder::getCreateTime, end);
         }
         wrapper.orderByDesc(CustomerOrder::getCreateTime);
-        return customerOrderMapper.selectPage(page, wrapper);
+        IPage<CustomerOrder> result = customerOrderMapper.selectPage(page, wrapper);
+        if (result != null && result.getRecords() != null && !result.getRecords().isEmpty()) {
+            fillOrderItems(result.getRecords());
+        }
+        return result;
+    }
+
+    /**
+     * 批量填充订单的车辆明细 items
+     */
+    private void fillOrderItems(List<CustomerOrder> orders) {
+        List<Long> ids = orders.stream().map(CustomerOrder::getId).collect(Collectors.toList());
+        if (ids.isEmpty()) return;
+        LambdaQueryWrapper<CustomerOrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.in(CustomerOrderItem::getOrderId, ids);
+        List<CustomerOrderItem> items = customerOrderItemMapper.selectList(itemWrapper);
+        if (items == null || items.isEmpty()) return;
+        Map<Long, List<CustomerOrderItem>> grouped = items.stream()
+                .collect(Collectors.groupingBy(CustomerOrderItem::getOrderId, LinkedHashMap::new, Collectors.toList()));
+        for (CustomerOrder order : orders) {
+            order.setItems(grouped.get(order.getId()));
+        }
     }
 
     /**
@@ -98,6 +125,7 @@ public class OrderServiceImpl implements OrderService {
         if (order == null) {
             throw new BusinessException("订单不存在");
         }
+        fillOrderItems(java.util.Collections.singletonList(order));
         return order;
     }
 
@@ -120,6 +148,21 @@ public class OrderServiceImpl implements OrderService {
             order.setCreateTime(LocalDateTime.now());
         }
         customerOrderMapper.insert(order);
+        saveOrderItems(order);
+    }
+
+    /**
+     * 保存订单车辆明细（多车）。无 items 时跳过，不影响历史单车写入。
+     */
+    private void saveOrderItems(CustomerOrder order) {
+        List<CustomerOrderItem> items = order.getItems();
+        if (items == null || items.isEmpty()) return;
+        if (order.getId() == null) return;
+        for (CustomerOrderItem item : items) {
+            item.setId(null);
+            item.setOrderId(order.getId());
+            customerOrderItemMapper.insert(item);
+        }
     }
 
     /**
@@ -161,6 +204,14 @@ public class OrderServiceImpl implements OrderService {
         if ("completed".equals(status) && !"completed".equals(oldStatus)) {
             autoGenerateInvoice(existing);
             autoGenerateFinanceRecords(existing);
+            // 消费累计变化，自动重算会员等级（失败仅记录日志，不阻断订单完成）
+            if (memberId != null) {
+                try {
+                    customerInfoMapper.recalcMemberLevel(memberId);
+                } catch (Exception e) {
+                    log.warn("订单完成后重算会员等级失败 orderId={}, memberId={}: {}", id, memberId, e.getMessage());
+                }
+            }
         }
     }
 
@@ -194,30 +245,55 @@ public class OrderServiceImpl implements OrderService {
             income.setUpdatedAt(now);
             financeRecordMapper.insert(income);
         }
-        // 2. 支出流水（rental_cost = daily_cost × days）
-        if (order.getCarId() != null) {
-            CarInfo car = carInfoMapper.selectById(order.getCarId());
-            if (car != null && car.getDailyCost() != null && order.getDays() != null) {
-                LambdaQueryWrapper<FinanceRecord> costWrapper = new LambdaQueryWrapper<>();
-                costWrapper.eq(FinanceRecord::getOrderNo, order.getOrderNo())
-                        .eq(FinanceRecord::getType, "rental_cost");
-                if (financeRecordMapper.selectCount(costWrapper) == 0) {
-                    BigDecimal costAmount = car.getDailyCost()
-                            .multiply(BigDecimal.valueOf(order.getDays()));
-                    FinanceRecord cost = new FinanceRecord();
-                    cost.setType("rental_cost");
-                    cost.setTypeName("车辆租赁成本");
-                    cost.setOrderNo(order.getOrderNo());
-                    cost.setCustomerName(order.getContactName());
-                    cost.setAmount(costAmount);
-                    cost.setMethod("系统自动");
-                    cost.setStatus("completed");
-                    cost.setCreatedAt(now);
-                    cost.setUpdatedAt(now);
-                    financeRecordMapper.insert(cost);
-                }
+        // 2. 支出流水（rental_cost = Σ daily_cost × days，多车累加）
+        BigDecimal costAmount = calcOrderRentalCost(order);
+        if (costAmount != null) {
+            LambdaQueryWrapper<FinanceRecord> costWrapper = new LambdaQueryWrapper<>();
+            costWrapper.eq(FinanceRecord::getOrderNo, order.getOrderNo())
+                    .eq(FinanceRecord::getType, "rental_cost");
+            if (financeRecordMapper.selectCount(costWrapper) == 0) {
+                FinanceRecord cost = new FinanceRecord();
+                cost.setType("rental_cost");
+                cost.setTypeName("车辆租赁成本");
+                cost.setOrderNo(order.getOrderNo());
+                cost.setCustomerName(order.getContactName());
+                cost.setAmount(costAmount);
+                cost.setMethod("系统自动");
+                cost.setStatus("completed");
+                cost.setCreatedAt(now);
+                cost.setUpdatedAt(now);
+                financeRecordMapper.insert(cost);
             }
         }
+    }
+
+    /**
+     * 计算订单租赁成本：
+     * 优先按车辆明细 items 逐车累加 daily_cost × days（一单可含多车）；
+     * 无明细时回退使用主表冗余的 carId/days（兼容历史单车订单）。
+     */
+    private BigDecimal calcOrderRentalCost(CustomerOrder order) {
+        List<CustomerOrderItem> items = order.getItems();
+        if (items != null && !items.isEmpty()) {
+            BigDecimal sum = BigDecimal.ZERO;
+            boolean any = false;
+            for (CustomerOrderItem item : items) {
+                if (item.getCarId() == null || item.getDays() == null) continue;
+                CarInfo car = carInfoMapper.selectById(item.getCarId());
+                if (car == null || car.getDailyCost() == null) continue;
+                sum = sum.add(car.getDailyCost().multiply(BigDecimal.valueOf(item.getDays())));
+                any = true;
+            }
+            return any ? sum : null;
+        }
+        // 历史单车订单回退
+        if (order.getCarId() != null && order.getDays() != null) {
+            CarInfo car = carInfoMapper.selectById(order.getCarId());
+            if (car != null && car.getDailyCost() != null) {
+                return car.getDailyCost().multiply(BigDecimal.valueOf(order.getDays()));
+            }
+        }
+        return null;
     }
 
     /**
@@ -300,6 +376,14 @@ public class OrderServiceImpl implements OrderService {
             existing.setStatusName(order.getStatusName());
         }
         customerOrderMapper.updateById(existing);
+        // 车辆明细：提供 items 时整组替换（先删旧明细再插入新明细）
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            LambdaQueryWrapper<CustomerOrderItem> delWrapper = new LambdaQueryWrapper<>();
+            delWrapper.eq(CustomerOrderItem::getOrderId, id);
+            customerOrderItemMapper.delete(delWrapper);
+            existing.setItems(order.getItems());
+            saveOrderItems(existing);
+        }
     }
 
     @Override
@@ -308,6 +392,10 @@ public class OrderServiceImpl implements OrderService {
         if (existing == null) {
             throw new BusinessException("订单不存在");
         }
+        // 级联删除车辆明细（逻辑删除，主表删除触发子表全删）
+        LambdaQueryWrapper<CustomerOrderItem> itemWrapper = new LambdaQueryWrapper<>();
+        itemWrapper.eq(CustomerOrderItem::getOrderId, id);
+        customerOrderItemMapper.delete(itemWrapper);
         customerOrderMapper.deleteById(id);
     }
 
