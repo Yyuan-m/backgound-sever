@@ -49,7 +49,7 @@ public class DictController {
     }
 
     @PostMapping("/type")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:add")
     @LogChanges(
         entityClass = SysDictType.class,
         mapperClass = SysDictTypeMapper.class,
@@ -65,7 +65,7 @@ public class DictController {
     }
 
     @PutMapping("/type")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:update")
     @LogChanges(
         entityClass = SysDictType.class,
         mapperClass = SysDictTypeMapper.class,
@@ -80,7 +80,7 @@ public class DictController {
     }
 
     @DeleteMapping("/type/{id}")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:delete")
     @LogChanges(
         entityClass = SysDictType.class,
         mapperClass = SysDictTypeMapper.class,
@@ -96,7 +96,7 @@ public class DictController {
     }
 
     @DeleteMapping("/type/batch")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:delete")
     public Result<?> batchDeleteType(@RequestBody Map<String, Object> body) {
         Object idsObj = body.get("ids");
         List<Long> ids = ((List<?>) idsObj) == null ? List.of()
@@ -125,7 +125,7 @@ public class DictController {
     }
 
     @PostMapping("/data")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:add")
     @LogChanges(
         entityClass = SysDictData.class,
         mapperClass = SysDictDataMapper.class,
@@ -142,7 +142,7 @@ public class DictController {
     }
 
     @PutMapping("/data")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:update")
     @LogChanges(
         entityClass = SysDictData.class,
         mapperClass = SysDictDataMapper.class,
@@ -158,7 +158,7 @@ public class DictController {
     }
 
     @DeleteMapping("/data/{id}")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:delete")
     @LogChanges(
         entityClass = SysDictData.class,
         mapperClass = SysDictDataMapper.class,
@@ -175,7 +175,7 @@ public class DictController {
     }
 
     @DeleteMapping("/data/batch")
-    @RequirePermission("settings:dict")
+    @RequirePermission("settings:dict:delete")
     public Result<?> batchDeleteData(@RequestBody Map<String, Object> body) {
         Object idsObj = body.get("ids");
         List<Long> ids = ((List<?>) idsObj) == null ? List.of()

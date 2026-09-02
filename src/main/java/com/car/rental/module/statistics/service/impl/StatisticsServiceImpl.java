@@ -163,10 +163,11 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public List<CustomerInfo> getLatestCustomers() {
-        LambdaQueryWrapper<CustomerInfo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.orderByDesc(CustomerInfo::getCreatedAt)
-                .last("LIMIT 5");
-        return customerInfoMapper.selectList(wrapper);
+        // 复用租客列表联表查询（member 为主表 + 实时聚合累计消费/订单数），取最新 5 条，
+        // 与 /api/customer/list 返回字段保持一致，供仪表盘「最新租客」卡片使用
+        return customerInfoMapper.selectPageWithMember(
+                new com.baomidou.mybatisplus.extension.plugins.pagination.Page<>(1, 5),
+                null, null, null).getRecords();
     }
 
     @Override

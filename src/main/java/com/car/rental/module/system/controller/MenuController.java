@@ -19,6 +19,16 @@ public class MenuController {
     @Autowired
     private MenuService menuService;
 
+    /**
+     * 当前登录用户可见的菜单列表（侧边栏渲染数据源）。
+     * 仅需登录即可访问（无 @RequirePermission），由服务层按用户权限过滤，
+     * 避免无 settings 权限的角色（如客服/财务）加载菜单被 403 拦截导致侧边栏空白。
+     */
+    @GetMapping("/user-menus")
+    public Result<List<SysMenu>> userMenus() {
+        return Result.ok(menuService.getUserMenus());
+    }
+
     @RequirePermission("settings:menu:list")
     @GetMapping("/tree")
     public Result<List<SysMenu>> tree() {

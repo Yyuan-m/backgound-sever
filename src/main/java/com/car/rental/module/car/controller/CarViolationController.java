@@ -47,7 +47,7 @@ public class CarViolationController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("vehicle:violation")
+    @RequirePermission("vehicle:violation:add")
     @LogChanges(
         entityClass = CarViolation.class,
         mapperClass = CarViolationMapper.class,
@@ -66,7 +66,7 @@ public class CarViolationController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("vehicle:violation")
+    @RequirePermission("vehicle:violation:update")
     @LogChanges(
         entityClass = CarViolation.class,
         mapperClass = CarViolationMapper.class,
@@ -84,7 +84,7 @@ public class CarViolationController {
     }
 
     @PutMapping("/{id}/handle")
-    @RequirePermission("vehicle:violation")
+    @RequirePermission("vehicle:violation:handle")
     public Result<Void> handle(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         String status = (String) params.get("status");
         String handler = (String) params.get("handler");
@@ -94,7 +94,7 @@ public class CarViolationController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("vehicle:violation")
+    @RequirePermission("vehicle:violation:delete")
     @LogChanges(
         entityClass = CarViolation.class,
         mapperClass = CarViolationMapper.class,

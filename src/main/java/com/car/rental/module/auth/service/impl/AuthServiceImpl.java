@@ -2,6 +2,7 @@ package com.car.rental.module.auth.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.car.rental.common.exception.BusinessException;
+import com.car.rental.common.security.ButtonPermissionService;
 import com.car.rental.common.util.JwtUtil;
 import com.car.rental.entity.SysRole;
 import com.car.rental.entity.SysUser;
@@ -15,11 +16,14 @@ import com.car.rental.module.auth.model.UserVO;
 import com.car.rental.module.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -28,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -45,6 +50,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtil jwtUtil;
     private final RedisTemplate<String, Object> redisTemplate;
     private final StringRedisTemplate stringRedisTemplate;
+    private final ButtonPermissionService buttonPermissionService;
     
 
     @Override
@@ -67,6 +73,9 @@ public class AuthServiceImpl implements AuthService {
             throw new BusinessException("账号已被禁用，请联系管理员");
         }
 
+        // 记录最后登录信息（登录时间 + 客户端 IP），供用户管理/操作审计展示
+        updateLastLoginInfo(user);
+
         String token = jwtUtil.generateToken(user.getId(), user.getUsername());
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getUsername());
 
@@ -80,6 +89,48 @@ public class AuthServiceImpl implements AuthService {
         result.put("refreshToken", refreshToken);
         result.put("user", userVO);
         return result;
+    }
+
+    /** 更新用户最后登录时间与最近一次登录 IP */
+    private void updateLastLoginInfo(SysUser user) {
+        try {
+            SysUser update = new SysUser();
+            update.setId(user.getId());
+            update.setLastLoginTime(LocalDateTime.now());
+            update.setLastLoginIp(resolveClientIp());
+            sysUserMapper.updateById(update);
+        } catch (Exception e) {
+            // 最后登录记录失败不影响登录主流程，仅告警
+            log.warn("更新用户最后登录信息失败: userId={}, err={}", user.getId(), e.getMessage());
+        }
+    }
+
+    /** 从当前请求解析客户端 IP（经代理转发时取真实来源 IP） */
+    private String resolveClientIp() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs == null) {
+                return null;
+            }
+            HttpServletRequest request = attrs.getRequest();
+            String ip = request.getHeader("X-Forwarded-For");
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("Proxy-Client-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getHeader("WL-Proxy-Client-IP");
+            }
+            if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+                ip = request.getRemoteAddr();
+            }
+            // 多级代理时取第一个
+            if (ip != null && ip.contains(",")) {
+                ip = ip.split(",")[0].trim();
+            }
+            return ip;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     @Override
@@ -190,6 +241,23 @@ public class AuthServiceImpl implements AuthService {
         return result;
     }
 
+    @Override
+    public void refreshUserCache(Long userId) {
+        SysUser user = sysUserMapper.selectById(userId);
+        if (user == null) {
+            // 用户已不存在，直接清理缓存
+            evictUserCache(userId);
+            return;
+        }
+        List<String> permissions = loadUserPermissions(userId);
+        cacheUserInfo(user, permissions);
+    }
+
+    @Override
+    public void evictUserCache(Long userId) {
+        redisTemplate.delete(REDIS_USER_INFO_PREFIX + userId);
+    }
+
     private boolean isTokenBlacklisted(String token) {
         Boolean hasKey = stringRedisTemplate.hasKey(REDIS_TOKEN_BLACKLIST_PREFIX + token);
         return Boolean.TRUE.equals(hasKey);
@@ -237,6 +305,12 @@ public class AuthServiceImpl implements AuthService {
                     }
                 }
             }
+        }
+
+        // 剔除被禁用的按钮权限（sys_menu 中 type='button' 且 status=0 的行）：
+        // 管理员在菜单管理中禁用按钮后，该按钮权限立即对所有用户失效
+        if (!allPermissions.isEmpty()) {
+            allPermissions.removeAll(buttonPermissionService.getDisabledButtonPerms());
         }
 
         return allPermissions;

@@ -54,7 +54,7 @@ public class CouponController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:add")
     @LogChanges(
             entityClass = Coupon.class,
             mapperClass = CouponMapper.class,
@@ -76,7 +76,7 @@ public class CouponController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:update")
     @LogChanges(
             entityClass = Coupon.class,
             mapperClass = CouponMapper.class,
@@ -97,7 +97,7 @@ public class CouponController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:delete")
     @LogChanges(
             entityClass = Coupon.class,
             mapperClass = CouponMapper.class,
@@ -120,7 +120,7 @@ public class CouponController {
 
     /** 确认投放（草稿/已下线 → 已投放），防止运营误发的二次确认 */
     @PutMapping("/{id}/publish")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:update")
     @LogChanges(
             entityClass = Coupon.class,
             mapperClass = CouponMapper.class,
@@ -142,7 +142,7 @@ public class CouponController {
 
     /** 下线（已投放 → 已下线） */
     @PutMapping("/{id}/offline")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:update")
     @LogChanges(
             entityClass = Coupon.class,
             mapperClass = CouponMapper.class,
@@ -164,7 +164,7 @@ public class CouponController {
 
     /** 兼容旧状态切换接口（status=published→投放, offline→下线） */
     @PutMapping("/{id}/status")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:status")
     public Result<Void> toggleStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
         couponService.toggleStatus(id, body.get("status"));
         return Result.ok();
@@ -172,7 +172,7 @@ public class CouponController {
 
     /** 设置关联车辆（一对多），body: {"carIds":[1,2,3]} */
     @PutMapping("/{id}/cars")
-    @RequirePermission("marketing:coupon")
+    @RequirePermission("marketing:coupon:update")
     public Result<Void> saveCars(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
         couponService.saveCars(id, body.get("carIds"));
         return Result.ok();

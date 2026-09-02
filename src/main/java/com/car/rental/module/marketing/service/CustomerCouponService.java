@@ -27,6 +27,13 @@ public interface CustomerCouponService {
     /** 领取优惠券（原子扣库存 + 写 member_coupon） */
     Long receive(Long memberId, Long couponId, String source);
 
+    /**
+     * 后台定向发放（管理端指定会员批量发放，source=manual，直接写入个人中心）
+     * 每人发一张，不受 perUserLimit 限制；校验库存，不足抛异常
+     * @return 实际发放人数
+     */
+    int grantToMembers(Long couponId, List<Long> memberIds);
+
     /** 锁定优惠券（下单预占，unused → locked） */
     void lock(Long memberCouponId, Long memberId);
 

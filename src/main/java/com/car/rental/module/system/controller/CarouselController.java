@@ -43,7 +43,7 @@ public class CarouselController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("settings:carousel")
+    @RequirePermission("settings:carousel:add")
     @LogChanges(
         entityClass = Carousel.class,
         mapperClass = CarouselMapper.class,
@@ -61,7 +61,7 @@ public class CarouselController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("settings:carousel")
+    @RequirePermission("settings:carousel:update")
     @LogChanges(
         entityClass = Carousel.class,
         mapperClass = CarouselMapper.class,
@@ -78,7 +78,7 @@ public class CarouselController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("settings:carousel")
+    @RequirePermission("settings:carousel:delete")
     @LogChanges(
         entityClass = Carousel.class,
         mapperClass = CarouselMapper.class,
@@ -96,7 +96,7 @@ public class CarouselController {
     }
 
     @PutMapping("/{id}/status")
-    @RequirePermission("settings:carousel")
+    @RequirePermission("settings:carousel:status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         Integer status = params.get("status") != null ? ((Number) params.get("status")).intValue() : null;
         carouselService.updateStatus(id, status);

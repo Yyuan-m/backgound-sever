@@ -21,7 +21,7 @@ public interface MemberCouponMapper extends BaseMapper<MemberCoupon> {
     @Select("SELECT mc.*, " +
             "c.name AS coupon_name, c.type AS coupon_type, c.type_name AS coupon_type_name, " +
             "c.value AS coupon_value, c.min_amount AS min_amount, c.discount_cap AS discount_cap, " +
-            "c.apply_scope AS apply_scope " +
+            "c.apply_scope AS apply_scope, c.valid_start_time AS valid_start_time " +
             "FROM car_rental_customer.member_coupon mc " +
             "LEFT JOIN car_rental.coupon c ON mc.coupon_id = c.id AND c.is_delete = 0 " +
             "WHERE mc.member_id = #{memberId} AND mc.is_delete = 0 " +
@@ -55,4 +55,18 @@ public interface MemberCouponMapper extends BaseMapper<MemberCoupon> {
     int verifyWithOrder(@Param("id") Long id,
                        @Param("orderId") Long orderId,
                        @Param("version") Integer version);
+
+    /**
+     * 校验会员ID列表中真实存在（未删除）的数量（定向发放用）
+     */
+    @Select("<script>SELECT COUNT(*) FROM car_rental_customer.member " +
+            "WHERE is_delete = 0 AND id IN " +
+            "<foreach collection='ids' item='id' open='(' separator=',' close=')'>#{id}</foreach></script>")
+    int countExistingMembers(@Param("ids") List<Long> ids);
+
+    /**
+     * 查询会员的会员等级（领取"按会员等级"发放的券时校验用）
+     */
+    @Select("SELECT level FROM car_rental_customer.member WHERE id = #{memberId} AND is_delete = 0")
+    String selectMemberLevel(@Param("memberId") Long memberId);
 }

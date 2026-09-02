@@ -38,7 +38,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public Result<Void> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("权限不足: {}", e.getMessage());
-        return Result.error(Result.FORBIDDEN, "权限不足");
+        return Result.error(Result.FORBIDDEN, "您没有该操作的权限，请联系管理员配置");
     }
 
     /**

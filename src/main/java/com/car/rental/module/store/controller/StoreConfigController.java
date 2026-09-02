@@ -30,28 +30,28 @@ public class StoreConfigController {
     }
 
     @PostMapping("/api/store-config/city/add")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:add")
     public Result<Void> addCity(@RequestBody City city) {
         storeConfigService.addCity(city);
         return Result.ok();
     }
 
     @PutMapping("/api/store-config/city/update/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:update")
     public Result<Void> updateCity(@PathVariable Long id, @RequestBody City city) {
         storeConfigService.updateCity(id, city);
         return Result.ok();
     }
 
     @DeleteMapping("/api/store-config/city/delete/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:delete")
     public Result<Void> deleteCity(@PathVariable Long id) {
         storeConfigService.deleteCity(id);
         return Result.ok();
     }
 
     @PutMapping("/api/store-config/city/status/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:status")
     public Result<Void> toggleCityStatus(@PathVariable Long id, @RequestParam Integer status) {
         storeConfigService.toggleCityStatus(id, status);
         return Result.ok();
@@ -66,28 +66,28 @@ public class StoreConfigController {
     }
 
     @PostMapping("/api/store-config/store/add")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:add")
     public Result<Void> addStore(@RequestBody Store store) {
         storeConfigService.addStore(store);
         return Result.ok();
     }
 
     @PutMapping("/api/store-config/store/update/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:update")
     public Result<Void> updateStore(@PathVariable Long id, @RequestBody Store store) {
         storeConfigService.updateStore(id, store);
         return Result.ok();
     }
 
     @DeleteMapping("/api/store-config/store/delete/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:delete")
     public Result<Void> deleteStore(@PathVariable Long id) {
         storeConfigService.deleteStore(id);
         return Result.ok();
     }
 
     @PutMapping("/api/store-config/store/status/{id}")
-    @RequirePermission("settings")
+    @RequirePermission("settings:store:status")
     public Result<Void> toggleStoreStatus(@PathVariable Long id, @RequestParam Integer status) {
         storeConfigService.toggleStoreStatus(id, status);
         return Result.ok();

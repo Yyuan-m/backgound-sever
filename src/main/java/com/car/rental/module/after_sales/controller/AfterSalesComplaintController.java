@@ -40,7 +40,7 @@ public class AfterSalesComplaintController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("after_sales:complaint")
+    @RequirePermission("after_sales:complaint:add")
     @LogChanges(
         entityClass = AfterSalesComplaint.class,
         mapperClass = AfterSalesComplaintMapper.class,
@@ -60,7 +60,7 @@ public class AfterSalesComplaintController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("after_sales:complaint")
+    @RequirePermission("after_sales:complaint:update")
     @LogChanges(
         entityClass = AfterSalesComplaint.class,
         mapperClass = AfterSalesComplaintMapper.class,
@@ -79,7 +79,7 @@ public class AfterSalesComplaintController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("after_sales:complaint")
+    @RequirePermission("after_sales:complaint:delete")
     @LogChanges(
         entityClass = AfterSalesComplaint.class,
         mapperClass = AfterSalesComplaintMapper.class,
@@ -99,7 +99,7 @@ public class AfterSalesComplaintController {
     }
 
     @PutMapping("/{id}/handle")
-    @RequirePermission("after_sales:complaint")
+    @RequirePermission("after_sales:complaint:handle")
     public Result<?> handle(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         String status = (String) params.get("status");
         String assignee = (String) params.get("assignee");

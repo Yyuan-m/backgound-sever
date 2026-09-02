@@ -52,7 +52,7 @@ public class CarDocumentController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("vehicle:document")
+    @RequirePermission("vehicle:document:add")
     @LogChanges(
         entityClass = CarDocument.class,
         mapperClass = CarDocumentMapper.class,
@@ -70,7 +70,7 @@ public class CarDocumentController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("vehicle:document")
+    @RequirePermission("vehicle:document:update")
     @LogChanges(
         entityClass = CarDocument.class,
         mapperClass = CarDocumentMapper.class,
@@ -87,7 +87,7 @@ public class CarDocumentController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("vehicle:document")
+    @RequirePermission("vehicle:document:delete")
     @LogChanges(
         entityClass = CarDocument.class,
         mapperClass = CarDocumentMapper.class,

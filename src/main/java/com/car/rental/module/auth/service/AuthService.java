@@ -28,4 +28,14 @@ public interface AuthService {
 
     /** 找回密码 - 重置密码：通过临时令牌重置密码 */
     void resetPassword(String username, String resetToken, String newPassword);
+
+    /**
+     * 重建用户的 Redis 权限缓存（user:info:{userId}）。
+     * 用户角色或角色权限变更后调用，使权限立即生效——
+     * 注意不能直接删 key：JwtTokenFilter 仅从缓存读取权限，缓存缺失会导致空权限 403。
+     */
+    void refreshUserCache(Long userId);
+
+    /** 删除用户的 Redis 权限缓存（用户被删除时使用） */
+    void evictUserCache(Long userId);
 }

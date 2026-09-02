@@ -38,7 +38,7 @@ public class ReconciliationController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("finance:reconciliation")
+    @RequirePermission("finance:reconciliation:add")
     @LogChanges(
         entityClass = Reconciliation.class,
         mapperClass = ReconciliationMapper.class,
@@ -56,7 +56,7 @@ public class ReconciliationController {
     }
 
     @PutMapping("/update/{id}")
-    @RequirePermission("finance:reconciliation")
+    @RequirePermission("finance:reconciliation:update")
     @LogChanges(
         entityClass = Reconciliation.class,
         mapperClass = ReconciliationMapper.class,
@@ -73,7 +73,7 @@ public class ReconciliationController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("finance:reconciliation")
+    @RequirePermission("finance:reconciliation:delete")
     @LogChanges(
         entityClass = Reconciliation.class,
         mapperClass = ReconciliationMapper.class,
@@ -91,7 +91,7 @@ public class ReconciliationController {
     }
 
     @PutMapping("/{id}/status")
-    @RequirePermission("finance:reconciliation")
+    @RequirePermission("finance:reconciliation:status")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         String status = params.get("status") != null ? String.valueOf(params.get("status")) : null;
         reconciliationService.updateStatus(id, status);

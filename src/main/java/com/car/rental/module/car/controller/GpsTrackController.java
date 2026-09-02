@@ -51,7 +51,7 @@ public class GpsTrackController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("vehicle:gps")
+    @RequirePermission("vehicle:gps:add")
     @LogChanges(
         entityClass = GpsTrack.class,
         mapperClass = GpsTrackMapper.class,
@@ -69,7 +69,7 @@ public class GpsTrackController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("vehicle:gps")
+    @RequirePermission("vehicle:gps:update")
     @LogChanges(
         entityClass = GpsTrack.class,
         mapperClass = GpsTrackMapper.class,
@@ -86,7 +86,7 @@ public class GpsTrackController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("vehicle:gps")
+    @RequirePermission("vehicle:gps:delete")
     @LogChanges(
         entityClass = GpsTrack.class,
         mapperClass = GpsTrackMapper.class,

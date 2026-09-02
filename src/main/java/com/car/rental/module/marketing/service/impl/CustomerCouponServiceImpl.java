@@ -41,6 +41,8 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
         LambdaQueryWrapper<Coupon> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Coupon::getStatus, "published")
                .eq(Coupon::getPublished, 1)
+               // 仅排除"按指定用户"的券（已直接发放，不进入可领列表）；"全量/按会员等级"均进入C端可领列表
+               .and(w -> w.ne(Coupon::getGrantType, "user").or().isNull(Coupon::getGrantType))
                .le(Coupon::getValidStartTime, now)
                .gt(Coupon::getValidEndTime, now)
                .orderByDesc(Coupon::getCreatedAt);
@@ -90,6 +92,8 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
         for (MemberCoupon mc : mine) {
             if (!"unused".equals(mc.getStatus())) continue;
             if (mc.getExpireTime() != null && mc.getExpireTime().isBefore(now)) continue;
+            // 定向发放等场景券可能提前到账：生效时间未到不可用
+            if (mc.getValidStartTime() != null && mc.getValidStartTime().isAfter(now)) continue;
             if (mc.getMinAmount() != null && amount != null && amount.compareTo(mc.getMinAmount()) < 0) continue;
             // 指定车辆券需校验 carId
             if ("specified".equals(mc.getApplyScope())) {
@@ -117,6 +121,13 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
         }
         if (coupon.getValidEndTime() != null && coupon.getValidEndTime().isBefore(now)) {
             throw new BusinessException("优惠券已过期");
+        }
+        // 按会员等级发放的券：仅目标等级会员可手动领取
+        if ("level".equals(coupon.getGrantType())) {
+            String memberLevel = memberCouponMapper.selectMemberLevel(memberId);
+            if (memberLevel == null || !memberLevel.equals(coupon.getTargetLevel())) {
+                throw new BusinessException("该券仅限「" + coupon.getTargetLevel() + "」等级会员领取");
+            }
         }
         // 库存校验
         if (coupon.getTotalCount() != -1 && coupon.getReceivedCount() != null
@@ -153,6 +164,52 @@ public class CustomerCouponServiceImpl implements CustomerCouponService {
             log.error("领取优惠券失败，已回滚库存 couponId={}, memberId={}", couponId, memberId, e);
             throw new BusinessException("领取失败，请重试");
         }
+    }
+
+    /**
+     * 后台定向发放：指定会员批量发券，source=manual，直接写入个人中心。
+     * 每人发一张，不受 perUserLimit 限制（运营指定行为）；
+     * 库存不足/会员不存在时抛异常，事务回滚保证原子性。
+     */
+    @Override
+    @Transactional
+    public int grantToMembers(Long couponId, List<Long> memberIds) {
+        if (memberIds == null || memberIds.isEmpty()) {
+            throw new BusinessException("请选择定向发放的目标会员");
+        }
+        // 去重（同一会员只发一张）
+        List<Long> uniqueIds = memberIds.stream().distinct().collect(Collectors.toList());
+        // 校验会员真实存在（防 API 直调伪造 ID）
+        int existing = memberCouponMapper.countExistingMembers(uniqueIds);
+        if (existing != uniqueIds.size()) {
+            throw new BusinessException("部分会员不存在或已删除，请刷新后重新选择");
+        }
+        Coupon coupon = couponMapper.selectById(couponId);
+        LocalDateTime now = LocalDateTime.now();
+        for (Long memberId : uniqueIds) {
+            // 原子扣库存（含剩余量校验，并发安全；不足抛异常回滚整个发放）
+            int affected = couponMapper.incrReceivedCount(couponId);
+            if (affected == 0) {
+                throw new BusinessException("优惠券库存不足，本次发放已回滚（当前已领取数已达发行总量）");
+            }
+            try {
+                MemberCoupon mc = new MemberCoupon();
+                mc.setMemberId(memberId);
+                mc.setCouponId(couponId);
+                mc.setStatus("unused");
+                mc.setCode(generateCode());
+                mc.setClaimTime(now);
+                mc.setExpireTime(coupon.getValidEndTime());
+                mc.setSource("manual");
+                mc.setVersion(0);
+                memberCouponMapper.insert(mc);
+            } catch (Exception e) {
+                couponMapper.decrReceivedCount(couponId);
+                log.error("定向发放失败 couponId={}, memberId={}", couponId, memberId, e);
+                throw new BusinessException("定向发放失败，请重试（本次操作已回滚）");
+            }
+        }
+        return uniqueIds.size();
     }
 
     @Override

@@ -18,7 +18,7 @@ public class CarImageController {
     private final CarImageService carImageService;
 
     @GetMapping("/list")
-    @RequirePermission("vehicle:list")
+    @RequirePermission("vehicle:image")
     public Result<PageResult<CarImage>> list(
             @RequestParam(name = "page", defaultValue = "1") Integer pageNum,
             @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
@@ -29,7 +29,7 @@ public class CarImageController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("vehicle:add")
+    @RequirePermission("vehicle:image:add")
     @LogChanges(
         entityClass = CarImage.class,
         mapperClass = CarImageMapper.class,
@@ -46,7 +46,7 @@ public class CarImageController {
     }
 
     @DeleteMapping("/delete/{id}")
-    @RequirePermission("vehicle:delete")
+    @RequirePermission("vehicle:image:delete")
     @LogChanges(
         entityClass = CarImage.class,
         mapperClass = CarImageMapper.class,

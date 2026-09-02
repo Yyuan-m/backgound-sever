@@ -39,6 +39,7 @@ public class CouponServiceImpl implements CouponService {
     private final MemberCouponMapper memberCouponMapper;
     private final CustomerOrderMapper customerOrderMapper;
     private final SecurityUtil securityUtil;
+    private final com.car.rental.module.marketing.service.CustomerCouponService customerCouponService;
 
     private static final List<String> VALID_TYPES = Arrays.asList("discount", "deduction", "duration");
     private static final List<String> VALID_SCOPES = Arrays.asList("all", "specified");
@@ -143,11 +144,32 @@ public class CouponServiceImpl implements CouponService {
     @Transactional
     public void add(Coupon coupon) {
         validateCoupon(coupon);
+        String grantType = coupon.getGrantType() == null ? "all" : coupon.getGrantType();
+        boolean byLevel = "level".equals(grantType);
+        boolean byUser = "user".equals(grantType);
+        // 仅"按指定用户"需保存即直接发放进用户账户；"按会员等级/全量"均保存为草稿、投放后由会员手动领取
+        boolean directlyGrant = byUser;
+        if (byLevel && !StringUtils.hasText(coupon.getTargetLevel())) {
+            throw new BusinessException("按等级发放必须选择目标会员等级");
+        }
+        if (byUser && (coupon.getMemberIds() == null || coupon.getMemberIds().isEmpty())) {
+            throw new BusinessException("按用户发放必须选择至少一名目标会员");
+        }
+        coupon.setGrantType(grantType);
         if (!StringUtils.hasText(coupon.getCode())) {
             coupon.setCode(generateCode());
         }
-        coupon.setStatus("draft");
-        coupon.setPublished(0);
+        if (directlyGrant) {
+            // 按指定用户：保存即投放+直接发放进用户个人中心；券不出现在C端可领列表
+            coupon.setStatus("published");
+            coupon.setPublished(1);
+            coupon.setPublishedAt(LocalDateTime.now());
+            coupon.setPublishedBy(securityUtil.getCurrentUserId());
+        } else {
+            // 全量 / 按会员等级：保存为草稿，需运营手动投放后C端（或对应等级会员）可见可领
+            coupon.setStatus("draft");
+            coupon.setPublished(0);
+        }
         coupon.setReceivedCount(0);
         coupon.setUsedCount(0);
         if (coupon.getPerUserLimit() == null) coupon.setPerUserLimit(1);
@@ -158,6 +180,13 @@ public class CouponServiceImpl implements CouponService {
         coupon.setCreatedAt(LocalDateTime.now());
         couponMapper.insert(coupon);
         saveCars(coupon.getId(), coupon.getCarIds());
+        if (byUser) {
+            int granted = customerCouponService.grantToMembers(coupon.getId(), coupon.getMemberIds());
+            log.info("按用户定向发放优惠券完成 couponId={}, 发放人数: {}", coupon.getId(), granted);
+        } else if (byLevel) {
+            // 会员券：不自动发放到账户，保存为草稿，投放后由目标等级会员在C端手动领取
+            log.info("按会员等级投放优惠券已保存 couponId={}, 等级: {}", coupon.getId(), coupon.getTargetLevel());
+        }
     }
 
     @Override
@@ -218,6 +247,10 @@ public class CouponServiceImpl implements CouponService {
         if (!"draft".equals(coupon.getStatus()) && !"offline".equals(coupon.getStatus())) {
             throw new BusinessException("仅草稿/已下线状态的优惠券可投放");
         }
+        if ("user".equals(coupon.getGrantType())) {
+            throw new BusinessException("按指定用户发放的优惠券已直接发放，不支持再次投放；如需投放请重新新增");
+        }
+        // 全量 / 按会员等级（会员券，需会员手动领取）：均支持投放
         if (coupon.getValidEndTime() != null && coupon.getValidEndTime().isBefore(LocalDateTime.now())) {
             throw new BusinessException("优惠券已过有效期，不可投放");
         }
@@ -274,12 +307,39 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     public Map<String, Object> listUsedOrders(Long couponId) {
-        // 直接查 customer_order 表，通过 coupon_id 关联
+        // 双路径关联查询：
+        //  1) customer_order.coupon_id 直接关联（核销回写正常时）
+        //  2) member_coupon(coupon_id=?, status=used) 的 order_id 反查（历史数据 coupon_id 未回写时的兜底）
         // 不依赖 coupon 表状态，即使优惠券被删除/到期，订单中的关联关系仍持久存在
         LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CustomerOrder::getCouponId, couponId)
                 .orderByDesc(CustomerOrder::getCreateTime);
-        List<CustomerOrder> orders = customerOrderMapper.selectList(wrapper);
+        List<CustomerOrder> orders = new java.util.ArrayList<>(customerOrderMapper.selectList(wrapper));
+
+        // 兜底：反查核销记录中回写的 order_id，补充 coupon_id 缺失的历史订单
+        java.util.Set<Long> existingIds = new java.util.HashSet<>();
+        for (CustomerOrder o : orders) {
+            existingIds.add(o.getId());
+        }
+        List<MemberCoupon> usedRecords = memberCouponMapper.selectList(new LambdaQueryWrapper<MemberCoupon>()
+                .eq(MemberCoupon::getCouponId, couponId)
+                .eq(MemberCoupon::getStatus, "used")
+                .isNotNull(MemberCoupon::getOrderId));
+        List<Long> missingOrderIds = new java.util.ArrayList<>();
+        for (MemberCoupon mc : usedRecords) {
+            if (mc.getOrderId() != null && !existingIds.contains(mc.getOrderId())) {
+                missingOrderIds.add(mc.getOrderId());
+            }
+        }
+        if (!missingOrderIds.isEmpty()) {
+            for (CustomerOrder o : customerOrderMapper.selectBatchIds(missingOrderIds)) {
+                if (existingIds.add(o.getId())) {
+                    orders.add(o);
+                }
+            }
+            orders.sort(java.util.Comparator.comparing(CustomerOrder::getCreateTime,
+                    java.util.Comparator.nullsLast(java.util.Comparator.reverseOrder())));
+        }
 
         // 统计汇总（仅 completed 订单计入优惠金额统计）
         int totalOrders = orders.size();

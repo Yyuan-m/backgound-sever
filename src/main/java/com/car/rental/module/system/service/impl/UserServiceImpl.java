@@ -10,6 +10,7 @@ import com.car.rental.entity.SysUserRole;
 import com.car.rental.mapper.SysRoleMapper;
 import com.car.rental.mapper.SysUserMapper;
 import com.car.rental.mapper.SysUserRoleMapper;
+import com.car.rental.module.auth.service.AuthService;
 import com.car.rental.module.system.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,16 @@ public class UserServiceImpl implements UserService {
 
     @Autowired
     private SysUserRoleMapper sysUserRoleMapper;
+
+    @Autowired
+    private AuthService authService;
+
+    /** 重建用户 Redis 权限缓存（不能直接删：JwtTokenFilter 仅从缓存读权限，缺失会 403） */
+    private void refreshUserCache(Long userId) {
+        if (userId != null) {
+            authService.refreshUserCache(userId);
+        }
+    }
 
     @Override
     public IPage<SysUser> getPageList(long pageNum, long pageSize, String keyword, Integer status, String role) {
@@ -75,6 +86,29 @@ public class UserServiceImpl implements UserService {
         syncRoleFields(user);
 
         sysUserMapper.insert(user);
+
+        // 同步 sys_user_role 关联表（登录权限的实际数据源）
+        syncUserRoles(user.getId(), user.getRoles());
+    }
+
+    /**
+     * 同步用户-角色关联表：先删旧关联，再按 roleKeys 重建。
+     * 登录时 loadUserPermissions 从该表读取权限，必须与 sys_user.roles 保持一致。
+     */
+    private void syncUserRoles(Long userId, List<String> roleKeys) {
+        sysUserRoleMapper.delete(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, userId));
+        if (roleKeys == null || roleKeys.isEmpty()) {
+            return;
+        }
+        List<SysRole> roles = sysRoleMapper.selectList(
+                new LambdaQueryWrapper<SysRole>().in(SysRole::getRoleKey, roleKeys));
+        for (SysRole role : roles) {
+            SysUserRole userRole = new SysUserRole();
+            userRole.setUserId(userId);
+            userRole.setRoleId(role.getId());
+            sysUserRoleMapper.insert(userRole);
+        }
     }
 
     /**
@@ -148,6 +182,10 @@ public class UserServiceImpl implements UserService {
         }
         existingUser.setUpdatedAt(LocalDateTime.now());
         sysUserMapper.updateById(existingUser);
+
+        // 同步 sys_user_role 关联表 + 重建权限缓存，角色变更立即生效
+        syncUserRoles(existingUser.getId(), existingUser.getRoles());
+        refreshUserCache(existingUser.getId());
     }
 
     @Override
@@ -160,6 +198,10 @@ public class UserServiceImpl implements UserService {
         if (SUPER_ADMIN_ROLE_KEY.equals(user.getRole())) {
             throw new BusinessException("不能删除超级管理员");
         }
+        // 清除角色关联 + 权限缓存（用户已删除，直接清缓存）
+        sysUserRoleMapper.delete(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getUserId, id));
+        authService.evictUserCache(id);
         sysUserMapper.deleteById(id);
     }
 

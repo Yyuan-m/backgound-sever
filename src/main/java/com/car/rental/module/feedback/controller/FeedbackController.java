@@ -58,7 +58,7 @@ public class FeedbackController {
 
     /** 标记已处理（必填处理备注：沟通结果；防重复处理） */
     @PostMapping("/process/{id}")
-    @RequirePermission("feedback:update")
+    @RequirePermission("feedback:process")
     public Result<Void> process(@PathVariable Long id, @Valid @RequestBody FeedbackProcessDTO dto) {
         feedbackService.processFeedback(id, dto.getRemark());
         return Result.ok();
@@ -74,7 +74,7 @@ public class FeedbackController {
 
     /** 删除记录（物理删除，用于清理垃圾数据） */
     @DeleteMapping("/delete/{id}")
-    @RequirePermission("feedback:update")
+    @RequirePermission("feedback:delete")
     public Result<Void> delete(@PathVariable Long id) {
         feedbackService.deleteFeedback(id);
         return Result.ok();

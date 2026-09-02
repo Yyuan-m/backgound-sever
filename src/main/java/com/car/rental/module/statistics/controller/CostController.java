@@ -36,7 +36,7 @@ public class CostController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("finance:cost")
+    @RequirePermission("finance:cost:add")
     @LogChanges(
         entityClass = CostRecord.class,
         mapperClass = CostRecordMapper.class,
@@ -53,7 +53,7 @@ public class CostController {
     }
 
     @PutMapping("/update/{id}")
-    @RequirePermission("finance:cost")
+    @RequirePermission("finance:cost:update")
     @LogChanges(
         entityClass = CostRecord.class,
         mapperClass = CostRecordMapper.class,
@@ -69,7 +69,7 @@ public class CostController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("finance:cost")
+    @RequirePermission("finance:cost:delete")
     @LogChanges(
         entityClass = CostRecord.class,
         mapperClass = CostRecordMapper.class,

@@ -45,7 +45,7 @@ public class SysFileController {
 
     /** 逻辑删除（标记为已删除，移入回收站） */
     @DeleteMapping("/{id}")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:delete")
     public Result<Void> delete(@PathVariable Long id) {
         sysFileService.delete(id);
         return Result.ok();
@@ -53,7 +53,7 @@ public class SysFileController {
 
     /** 批量逻辑删除（移入回收站） */
     @PostMapping("/batch")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:delete")
     public Result<Void> batchDelete(@RequestBody Map<String, Object> body) {
         List<Long> ids = parseIds(body.get("ids"));
         sysFileService.batchDelete(ids);
@@ -62,7 +62,7 @@ public class SysFileController {
 
     /** 物理删除（同时删除磁盘文件，谨慎使用） */
     @DeleteMapping("/physical/{id}")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:delete")
     public Result<Void> physicalDelete(@PathVariable Long id) {
         sysFileService.physicalDelete(id);
         return Result.ok();
@@ -70,7 +70,7 @@ public class SysFileController {
 
     /** 批量物理删除（同时删除磁盘文件） */
     @PostMapping("/batch-physical")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:delete")
     public Result<Void> batchPhysicalDelete(@RequestBody Map<String, Object> body) {
         List<Long> ids = parseIds(body.get("ids"));
         sysFileService.batchPhysicalDelete(ids);
@@ -79,7 +79,7 @@ public class SysFileController {
 
     /** 恢复文件（从回收站恢复为正常状态） */
     @PostMapping("/restore/{id}")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:restore")
     public Result<Void> restore(@PathVariable Long id) {
         sysFileService.restore(id);
         return Result.ok();
@@ -87,7 +87,7 @@ public class SysFileController {
 
     /** 批量恢复文件 */
     @PostMapping("/batch-restore")
-    @RequirePermission("system:file")
+    @RequirePermission("system:file:restore")
     public Result<Void> batchRestore(@RequestBody Map<String, Object> body) {
         List<Long> ids = parseIds(body.get("ids"));
         sysFileService.batchRestore(ids);

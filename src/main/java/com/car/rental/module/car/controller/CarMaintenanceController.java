@@ -43,7 +43,7 @@ public class CarMaintenanceController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("vehicle:maintenance")
+    @RequirePermission("vehicle:maintenance:add")
     @LogChanges(
         entityClass = CarMaintenance.class,
         mapperClass = CarMaintenanceMapper.class,
@@ -62,7 +62,7 @@ public class CarMaintenanceController {
     }
 
     @PutMapping("/update/{id}")
-    @RequirePermission("vehicle:maintenance")
+    @RequirePermission("vehicle:maintenance:update")
     @LogChanges(
         entityClass = CarMaintenance.class,
         mapperClass = CarMaintenanceMapper.class,
@@ -80,7 +80,7 @@ public class CarMaintenanceController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("vehicle:maintenance")
+    @RequirePermission("vehicle:maintenance:delete")
     @LogChanges(
         entityClass = CarMaintenance.class,
         mapperClass = CarMaintenanceMapper.class,

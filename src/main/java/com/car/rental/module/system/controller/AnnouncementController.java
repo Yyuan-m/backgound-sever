@@ -36,7 +36,7 @@ public class AnnouncementController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("settings:announcements")
+    @RequirePermission("settings:announcements:add")
     @LogChanges(
         entityClass = Announcement.class,
         mapperClass = AnnouncementMapper.class,
@@ -52,7 +52,7 @@ public class AnnouncementController {
     }
 
     @PutMapping("/update")
-    @RequirePermission("settings:announcements")
+    @RequirePermission("settings:announcements:update")
     @LogChanges(
         entityClass = Announcement.class,
         mapperClass = AnnouncementMapper.class,
@@ -67,7 +67,7 @@ public class AnnouncementController {
     }
 
     @DeleteMapping("/{id}/delete")
-    @RequirePermission("settings:announcements")
+    @RequirePermission("settings:announcements:delete")
     @LogChanges(
         entityClass = Announcement.class,
         mapperClass = AnnouncementMapper.class,

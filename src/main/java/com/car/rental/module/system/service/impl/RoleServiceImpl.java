@@ -5,9 +5,12 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.car.rental.common.exception.BusinessException;
 import com.car.rental.entity.SysRole;
+import com.car.rental.entity.SysUser;
 import com.car.rental.entity.SysUserRole;
 import com.car.rental.mapper.SysRoleMapper;
+import com.car.rental.mapper.SysUserMapper;
 import com.car.rental.mapper.SysUserRoleMapper;
+import com.car.rental.module.auth.service.AuthService;
 import com.car.rental.module.system.service.RoleService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,12 @@ public class RoleServiceImpl implements RoleService {
 
     @Autowired
     private SysUserRoleMapper sysUserRoleMapper;
+
+    @Autowired
+    private SysUserMapper sysUserMapper;
+
+    @Autowired
+    private AuthService authService;
 
     @Override
     public IPage<SysRole> getPageList(long pageNum, long pageSize, String keyword, Integer status) {
@@ -99,8 +108,19 @@ public class RoleServiceImpl implements RoleService {
 
         LambdaQueryWrapper<SysUserRole> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SysUserRole::getRoleId, id);
-        if (sysUserRoleMapper.selectCount(wrapper) > 0) {
-            throw new BusinessException("该角色下存在关联用户，无法删除");
+        List<SysUserRole> links = sysUserRoleMapper.selectList(wrapper);
+        if (!links.isEmpty()) {
+            // 仅当存在「现存用户」的关联时才拦截；历史遗留的孤立关联（用户已删除但关联未清理）
+            // 不阻止删除，并在删除角色时顺带清理干净
+            List<Long> userIds = links.stream().map(SysUserRole::getUserId).toList();
+            Long activeUsers = sysUserMapper.selectCount(
+                    // @TableLogic 自动排除已软删用户
+                    new LambdaQueryWrapper<SysUser>().in(SysUser::getId, userIds));
+            if (activeUsers != null && activeUsers > 0) {
+                throw new BusinessException("该角色下存在关联用户，无法删除");
+            }
+            // 纯孤立关联：删除角色前清理，避免残留
+            sysUserRoleMapper.delete(wrapper);
         }
 
         sysRoleMapper.deleteById(id);
@@ -143,6 +163,14 @@ public class RoleServiceImpl implements RoleService {
         role.setMenuPermissions(permissions);
         role.setUpdatedAt(LocalDateTime.now());
         sysRoleMapper.updateById(role);
+
+        // 重建拥有该角色的所有用户的 Redis 权限缓存，权限变更立即生效
+        List<SysUserRole> userRoles = sysUserRoleMapper.selectList(
+                new LambdaQueryWrapper<SysUserRole>().eq(SysUserRole::getRoleId, id));
+        for (SysUserRole ur : userRoles) {
+            authService.refreshUserCache(ur.getUserId());
+        }
+        log.info("角色 {} 权限已更新，已刷新 {} 个用户的权限缓存", role.getName(), userRoles.size());
     }
 
     @Override

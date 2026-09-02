@@ -85,4 +85,8 @@ public class MemberCoupon {
     /** 适用范围 */
     @TableField(exist = false)
     private String applyScope;
+
+    /** 券模板生效时间（JOIN coupon 填充，用于生效前不可用过滤） */
+    @TableField(exist = false)
+    private LocalDateTime validStartTime;
 }

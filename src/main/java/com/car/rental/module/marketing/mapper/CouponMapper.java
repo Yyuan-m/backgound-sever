@@ -61,4 +61,15 @@ public interface CouponMapper extends BaseMapper<Coupon> {
         "WHERE id = #{couponId}"
     )
     int decrUsedCount(@Param("couponId") Long couponId);
+
+    /**
+     * 过期自动下线：已投放但超过失效时间的券 → offline（定时任务调用）
+     * @return 影响行数
+     */
+    @org.apache.ibatis.annotations.Update(
+        "UPDATE coupon SET status = 'offline', published = 0 " +
+        "WHERE status = 'published' AND is_delete = 0 " +
+        "AND valid_end_time IS NOT NULL AND valid_end_time < NOW()"
+    )
+    int offlineExpired();
 }

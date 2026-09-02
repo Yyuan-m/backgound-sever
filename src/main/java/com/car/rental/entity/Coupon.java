@@ -61,6 +61,12 @@ public class Coupon {
     /** 每人限领张数 */
     private Integer perUserLimit;
 
+    /** 发放方式 all全量投放（C端可领）/ level定向发放-按会员等级 / user定向发放-按指定用户 */
+    private String grantType;
+
+    /** 按等级定向发放的目标等级（grantType=level 时必填，如 diamond/normal） */
+    private String targetLevel;
+
     /** 适用范围 all全场通用/specified指定车辆 */
     private String applyScope;
 
@@ -107,4 +113,8 @@ public class Coupon {
     /** 关联车辆名称列表（查询展示用） */
     @TableField(exist = false)
     private java.util.List<String> carNames;
+
+    /** 指定用户发放的目标会员ID列表（grantType=user 新增时传入，非持久化） */
+    @TableField(exist = false)
+    private java.util.List<Long> memberIds;
 }

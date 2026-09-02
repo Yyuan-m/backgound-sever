@@ -38,7 +38,7 @@ public class InvoiceController {
     }
 
     @PostMapping("/add")
-    @RequirePermission("finance:invoice")
+    @RequirePermission("finance:invoice:add")
     @LogChanges(
         entityClass = Invoice.class,
         mapperClass = InvoiceMapper.class,
@@ -56,7 +56,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/update/{id}")
-    @RequirePermission("finance:invoice")
+    @RequirePermission("finance:invoice:update")
     @LogChanges(
         entityClass = Invoice.class,
         mapperClass = InvoiceMapper.class,
@@ -73,7 +73,7 @@ public class InvoiceController {
     }
 
     @DeleteMapping("/{id}")
-    @RequirePermission("finance:invoice")
+    @RequirePermission("finance:invoice:delete")
     @LogChanges(
         entityClass = Invoice.class,
         mapperClass = InvoiceMapper.class,
@@ -91,7 +91,7 @@ public class InvoiceController {
     }
 
     @PutMapping("/{id}/status")
-    @RequirePermission("finance:invoice")
+    @RequirePermission("finance:invoice:status")
     public Result<Void> updateStatus(@PathVariable Long id, @RequestBody Map<String, Object> params) {
         String status = params.get("status") != null ? String.valueOf(params.get("status")) : null;
         invoiceService.updateStatus(id, status);

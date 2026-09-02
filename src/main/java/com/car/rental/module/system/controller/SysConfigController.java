@@ -22,7 +22,7 @@ public class SysConfigController {
     }
 
     @PutMapping
-    @RequirePermission("settings:system")
+    @RequirePermission("settings:system:update")
     public Result<?> saveConfigs(@RequestBody Map<String, String> configs) {
         sysConfigService.saveConfigs(configs);
         return Result.ok();
