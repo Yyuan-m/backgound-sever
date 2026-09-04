@@ -15,4 +15,12 @@ public interface AfterSalesComplaintMapper extends BaseMapper<AfterSalesComplain
                      @Param("assignee") String assignee,
                      @Param("solution") String solution,
                      @Param("satisfaction") Integer satisfaction);
+
+    /** 开始处理：仅更新状态为处理中 + 记录处理人，不写解决时间 */
+    @Update("UPDATE after_sales_complaint SET status = 'processing', assignee = #{assignee} WHERE id = #{id}")
+    int startProcessing(@Param("id") Long id, @Param("assignee") String assignee);
+
+    /** 快捷修改优先级 */
+    @Update("UPDATE after_sales_complaint SET priority = #{priority} WHERE id = #{id}")
+    int updatePriority(@Param("id") Long id, @Param("priority") String priority);
 }

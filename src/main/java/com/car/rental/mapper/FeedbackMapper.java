@@ -126,7 +126,9 @@ public interface FeedbackMapper extends BaseMapper<Feedback> {
                    COALESCE(SUM(status = 'pending' AND rent_date IS NOT NULL
                        AND rent_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 7 DAY)), 0) AS upcoming,
                    COALESCE(SUM(type = 'appointment'), 0) AS appointment,
-                   COALESCE(SUM(type = 'feedback'), 0)     AS feedbackCount
+                   COALESCE(SUM(type = 'feedback'), 0)     AS feedbackCount,
+                   COALESCE(SUM(status = 'pending' AND type = 'appointment'), 0) AS pendingAppointment,
+                   COALESCE(SUM(status = 'pending' AND type = 'feedback'), 0)     AS pendingFeedback
             FROM car_rental_customer.feedback
             """)
     Map<String, Object> selectFeedbackStats();

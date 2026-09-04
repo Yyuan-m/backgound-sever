@@ -39,6 +39,12 @@ public class AfterSalesComplaintController {
         return Result.ok(complaintService.getById(id));
     }
 
+    @GetMapping("/{id}/vehicle")
+    @RequirePermission("after_sales:complaint")
+    public Result<?> getVehicle(@PathVariable Long id) {
+        return Result.ok(complaintService.getVehicleByComplaintId(id));
+    }
+
     @PostMapping("/add")
     @RequirePermission("after_sales:complaint:add")
     @LogChanges(
@@ -106,6 +112,21 @@ public class AfterSalesComplaintController {
         String solution = (String) params.get("solution");
         Integer satisfaction = params.get("satisfaction") != null ? ((Number) params.get("satisfaction")).intValue() : null;
         complaintService.handleComplaint(id, status, assignee, solution, satisfaction);
+        return Result.ok();
+    }
+
+    @PutMapping("/{id}/processing")
+    @RequirePermission("after_sales:complaint:handle")
+    public Result<?> startProcessing(@PathVariable Long id) {
+        complaintService.startProcessing(id);
+        return Result.ok();
+    }
+
+    @PutMapping("/{id}/priority")
+    @RequirePermission("after_sales:complaint:update")
+    public Result<?> updatePriority(@PathVariable Long id, @RequestBody Map<String, Object> params) {
+        String priority = (String) params.get("priority");
+        complaintService.updatePriority(id, priority);
         return Result.ok();
     }
 }
