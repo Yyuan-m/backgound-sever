@@ -116,4 +116,12 @@ public class CarInfo {
      */
     @TableField(exist = false)
     private Integer materialCount;
+
+    /**
+     * 未来预约数（非数据库字段）：
+     * - 列表接口返回时实时计算：pending/renting 且 start_date > 今天的订单数
+     * - 大于 0 即"已预约"，用于列表"是否已预约"展示
+     */
+    @TableField(exist = false)
+    private Integer reservedCount;
 }

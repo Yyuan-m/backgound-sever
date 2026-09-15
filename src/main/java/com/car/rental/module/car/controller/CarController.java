@@ -5,6 +5,7 @@ import com.car.rental.common.annotation.RequirePermission;
 import com.car.rental.common.result.PageResult;
 import com.car.rental.common.result.Result;
 import com.car.rental.entity.CarInfo;
+import com.car.rental.entity.CustomerOrder;
 import com.car.rental.mapper.CarInfoMapper;
 import com.car.rental.module.car.service.CarService;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/car")
@@ -123,5 +126,15 @@ public class CarController {
     public Result<Void> updateStatus(@PathVariable Long id, @RequestParam String status) {
         carService.updateStatus(id, status);
         return Result.ok();
+    }
+
+    /**
+     * 车辆预约情况：未结束订单列表（当前租赁中 + 未来预约），
+     * 含预约时间段与客户信息，用于列表"预约"按钮弹窗展示
+     */
+    @GetMapping("/reservations/{id}")
+    @RequirePermission("vehicle:detail")
+    public Result<List<CustomerOrder>> reservations(@PathVariable Long id) {
+        return Result.ok(carService.listReservations(id));
     }
 }

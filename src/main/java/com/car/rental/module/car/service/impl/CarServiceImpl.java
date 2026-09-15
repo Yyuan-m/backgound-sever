@@ -8,7 +8,9 @@ import com.car.rental.common.exception.BusinessException;
 import com.car.rental.common.result.PageResult;
 import com.car.rental.entity.CarConfig;
 import com.car.rental.entity.CarInfo;
+import com.car.rental.entity.CustomerOrder;
 import com.car.rental.mapper.CarInfoMapper;
+import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.module.car.mapper.CarConfigMapper;
 import com.car.rental.module.car.service.CarImageService;
 import com.car.rental.module.car.service.CarService;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,11 +31,13 @@ public class CarServiceImpl implements CarService {
     private final CarInfoMapper carInfoMapper;
     private final CarConfigMapper carConfigMapper;
     private final CarImageService carImageService;
+    private final CustomerOrderMapper customerOrderMapper;
 
     @Override
     public PageResult<CarInfo> list(Integer pageNum, Integer pageSize, String keyword, String type, String status) {
         Page<CarInfo> page = new Page<>(pageNum != null ? pageNum : 1, pageSize != null ? pageSize : 10);
-        // 车辆状态实时计算：存在待支付(pending)/租赁中(renting)订单的车辆显示为 rented，
+        // 车辆状态实时计算：当天处于待支付(pending)/租赁中(renting)订单租期内的车辆显示为 rented，
+        // 预约未来日期的订单不算当天在租（如约 28-30 号，今天到 27 号仍显示空闲可继续出租），
         // 不再直接使用 car_info.status 持久化字段（订单流转不回写该字段，直接查会显示错误的"空闲"）
         String kw = StringUtils.hasText(keyword) ? keyword : null;
         String tp = StringUtils.hasText(type) ? type : null;
@@ -97,6 +102,9 @@ public class CarServiceImpl implements CarService {
             }
         }
         carInfo.setId(id);
+        // 业务状态（是否出租）由订单按当天日期实时计算（见 CarInfoMapper），
+        // 编辑车辆时不允许手动修改 status：置 null 使 updateById 跳过该字段，保留库中原值
+        carInfo.setStatus(null);
         // 日成本价：未手动填写时自动 = 日租金 × 0.54
         calcDailyCostIfAbsent(carInfo);
         carInfoMapper.updateById(carInfo);
@@ -131,10 +139,31 @@ public class CarServiceImpl implements CarService {
         if (existing == null) {
             throw new BusinessException("车辆不存在");
         }
+        // 该接口仅用于上架/下架（idle ↔ offline）；
+        // 是否出租等业务状态由订单按当天日期实时计算，不允许通过此接口手动设置
+        if (!"idle".equals(status) && !"offline".equals(status)) {
+            throw new BusinessException("仅允许上架/下架操作，出租状态由订单自动计算");
+        }
         CarInfo update = new CarInfo();
         update.setId(id);
         update.setStatus(status);
         carInfoMapper.updateById(update);
+    }
+
+    @Override
+    public List<CustomerOrder> listReservations(Long carId) {
+        CarInfo existing = carInfoMapper.selectById(carId);
+        if (existing == null) {
+            throw new BusinessException("车辆不存在");
+        }
+        // 未结束订单：待支付/租赁中 且 还车日 >= 今天（还车日当天仍算使用中），
+        // 包含当前租赁中 + 未来预约，按开始日期升序
+        LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CustomerOrder::getCarId, carId)
+                .in(CustomerOrder::getStatus, "pending", "renting")
+                .ge(CustomerOrder::getEndDate, LocalDate.now())
+                .orderByAsc(CustomerOrder::getStartDate);
+        return customerOrderMapper.selectList(wrapper);
     }
 
     /**
