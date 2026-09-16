@@ -8,6 +8,9 @@ import com.car.rental.entity.SysFile;
 import com.car.rental.entity.SysUser;
 import com.car.rental.mapper.SysUserMapper;
 import com.car.rental.module.system.service.SysFileService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,6 +35,7 @@ import java.util.Set;
  * 通用文件上传接口
  * 上传成功后自动写入 sys_file 表，返回 url + fileId 等元信息
  */
+@Tag(name = "文件上传", description = "通用文件上传（图片/文档/视频），上传成功后自动写入 sys_file 表并返回 url、fileId 等元信息；/api/upload/** 免登录放行（公开接口）")
 @Slf4j
 @RestController
 @RequestMapping("/api/upload")
@@ -60,10 +64,11 @@ public class UploadController {
      * 单文件上传
      * @param bizType 业务类型（可选）：vehicle_image / avatar / document 等
      */
+    @Operation(summary = "单文件上传（公开接口）", description = "免登录公开接口（/api/upload/** 放行）。单文件大小不能超过 50MB，扩展名白名单：图片 jpg/jpeg/png/gif/webp/bmp/svg、文档 pdf/doc/docx/xls/xlsx/ppt/pptx/txt/md/csv、视频 mp4/avi/mov/wmv/flv/mkv/webm；返回相对 url（/uploads/xxx，由前端拼接 IP 端口），同时写入 sys_file 记录元信息，已登录时自动记录上传人")
     @PostMapping("/image")
     public Result<Map<String, Object>> uploadImage(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "bizType", required = false) String bizType,
+            @Parameter(description = "上传的文件") @RequestParam("file") MultipartFile file,
+            @Parameter(description = "业务类型（可选）：vehicle_image 车辆图片 / avatar 头像 / document 文档等") @RequestParam(value = "bizType", required = false) String bizType,
             HttpServletRequest request) {
         Map<String, Object> result = doUpload(file, bizType, request);
         return Result.ok(result);
@@ -72,10 +77,11 @@ public class UploadController {
     /**
      * 多文件上传
      */
+    @Operation(summary = "多文件上传（公开接口）", description = "免登录公开接口（/api/upload/** 放行）。至少选择一个文件，逐个校验并上传（单个不超过 50MB，扩展名白名单同单文件上传），返回每个文件的 url/fileId 等元信息列表")
     @PostMapping("/images")
     public Result<List<Map<String, Object>>> uploadImages(
-            @RequestParam("files") MultipartFile[] files,
-            @RequestParam(value = "bizType", required = false) String bizType,
+            @Parameter(description = "上传的文件数组") @RequestParam("files") MultipartFile[] files,
+            @Parameter(description = "业务类型（可选）：vehicle_image 车辆图片 / avatar 头像 / document 文档等") @RequestParam(value = "bizType", required = false) String bizType,
             HttpServletRequest request) {
         if (files == null || files.length == 0) {
             throw new BusinessException("请至少选择一个文件");

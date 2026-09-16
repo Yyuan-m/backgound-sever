@@ -7,6 +7,9 @@ import com.car.rental.common.result.Result;
 import com.car.rental.entity.CarMaintenance;
 import com.car.rental.module.car.mapper.CarMaintenanceMapper;
 import com.car.rental.module.car.service.CarMaintenanceService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "车辆维保管理", description = "车辆保养/维修记录的登记与跟踪，含费用、里程与下次保养日期")
 @RestController
 @RequestMapping("/api/car-maintenance")
 @RequiredArgsConstructor
@@ -25,23 +29,26 @@ public class CarMaintenanceController {
 
     private final CarMaintenanceService carMaintenanceService;
 
+    @Operation(summary = "维保列表（分页）", description = "按创建时间倒序分页查询，可按车辆ID与状态筛选。需要 vehicle:maintenance 权限")
     @GetMapping("/list")
     @RequirePermission("vehicle:maintenance")
     public Result<PageResult<CarMaintenance>> list(
-            @RequestParam(name = "page", defaultValue = "1") Integer pageNum,
-            @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) Long vehicleId,
-            @RequestParam(required = false) String status) {
+            @Parameter(description = "页码，从 1 开始") @RequestParam(name = "page", defaultValue = "1") Integer pageNum,
+            @Parameter(description = "每页条数") @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Parameter(description = "车辆ID") @RequestParam(required = false) Long vehicleId,
+            @Parameter(description = "状态") @RequestParam(required = false) String status) {
         PageResult<CarMaintenance> pageResult = carMaintenanceService.list(pageNum, pageSize, vehicleId, status);
         return Result.ok(pageResult);
     }
 
+    @Operation(summary = "维保详情", description = "按ID查询维保记录，记录不存在则报错。需要 vehicle:maintenance 权限")
     @GetMapping("/{id}")
     @RequirePermission("vehicle:maintenance")
-    public Result<CarMaintenance> getById(@PathVariable Long id) {
+    public Result<CarMaintenance> getById(@Parameter(description = "维保记录ID") @PathVariable Long id) {
         return Result.ok(carMaintenanceService.getById(id));
     }
 
+    @Operation(summary = "新增维保记录", description = "登记保养/维修信息（类型、费用、里程、保养公司、下次保养日期等）。需要 vehicle:maintenance:add 权限")
     @PostMapping("/add")
     @RequirePermission("vehicle:maintenance:add")
     @LogChanges(
@@ -61,6 +68,7 @@ public class CarMaintenanceController {
         return Result.ok();
     }
 
+    @Operation(summary = "编辑维保记录", description = "按ID更新维保信息，记录不存在则报错。需要 vehicle:maintenance:update 权限")
     @PutMapping("/update/{id}")
     @RequirePermission("vehicle:maintenance:update")
     @LogChanges(
@@ -74,11 +82,12 @@ public class CarMaintenanceController {
             "nextDate:下次保养日期", "remark:备注"
         }
     )
-    public Result<Void> update(@PathVariable Long id, @RequestBody CarMaintenance carMaintenance) {
+    public Result<Void> update(@Parameter(description = "维保记录ID") @PathVariable Long id, @RequestBody CarMaintenance carMaintenance) {
         carMaintenanceService.update(id, carMaintenance);
         return Result.ok();
     }
 
+    @Operation(summary = "删除维保记录", description = "按ID删除维保记录，记录不存在则报错。需要 vehicle:maintenance:delete 权限")
     @DeleteMapping("/{id}")
     @RequirePermission("vehicle:maintenance:delete")
     @LogChanges(
@@ -93,7 +102,7 @@ public class CarMaintenanceController {
             "nextDate:下次保养日期", "remark:备注"
         }
     )
-    public Result<Void> delete(@PathVariable Long id) {
+    public Result<Void> delete(@Parameter(description = "维保记录ID") @PathVariable Long id) {
         carMaintenanceService.delete(id);
         return Result.ok();
     }

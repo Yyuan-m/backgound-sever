@@ -40,6 +40,18 @@ jwt:
   # refresh token 有效期：7 天（长期，用于刷新 access token）
   refresh-expiration: 604800000
 
+# Knife4j 接口文档（http://localhost:8088/doc.html）
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+knife4j:
+  enable: true
+  setting:
+    # 界面语言：中文
+    language: zh_cn
+
 upload:
   # 上传目录放在用户目录下，避免 Windows 对 C:\ 根目录的写入保护
   path: ${user.home}/car_rental_uploads

@@ -5,6 +5,9 @@ import com.car.rental.common.result.PageResult;
 import com.car.rental.common.result.Result;
 import com.car.rental.entity.Announcement;
 import com.car.rental.module.system.service.AnnouncementService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
  * 路径走 /api/public/**，由 SecurityConfig 放行，无需登录 token。
  * 仅返回已发布（status=1）且未删除的公告，按优先级 high > normal > low + 创建时间倒序排序。
  */
+@Tag(name = "公开公告", description = "C 端公告列表分页查询；公开接口，无需登录")
 @RestController
 @RequestMapping("/api/public/announcement")
 @RequiredArgsConstructor
@@ -30,11 +34,12 @@ public class PublicAnnouncementController {
      * @param pageSize 每页条数，默认 10
      * @param priority 可选，按优先级过滤：high / normal / low
      */
+    @Operation(summary = "公告列表（C 端分页）", description = "说明：公开接口，无需登录；仅返回已发布（status=1）且未删除的公告，按优先级 high > normal > low 再按创建时间倒序排列，支持按优先级过滤")
     @GetMapping("/list")
     public Result<PageResult<Announcement>> list(
-            @RequestParam(name = "page", defaultValue = "1") Integer pageNum,
-            @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
-            @RequestParam(required = false) String priority) {
+            @Parameter(description = "页码，从 1 开始") @RequestParam(name = "page", defaultValue = "1") Integer pageNum,
+            @Parameter(description = "每页条数") @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
+            @Parameter(description = "优先级过滤：high / normal / low") @RequestParam(required = false) String priority) {
         IPage<Announcement> page = announcementService.getPublicPageList(pageNum, pageSize, priority);
         return Result.ok(PageResult.of(page));
     }

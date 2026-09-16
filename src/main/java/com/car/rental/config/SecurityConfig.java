@@ -36,7 +36,15 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password/**",
                                 "/api/upload/**",
                                 "/uploads/**",
-                                "/api/public/**"
+                                "/api/public/**",
+                                // Knife4j / Swagger 接口文档（免登录访问，仅内网开放）
+                                "/doc.html",
+                                "/webjars/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/favicon.ico"
                         ).permitAll()
                         .anyRequest().authenticated())
                 // 异常处理：区分“未认证(401)”与“权限不足(403)”

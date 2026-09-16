@@ -18,12 +18,13 @@
     <description>Luxury Car Rental Management System</description>
 
     <properties>
-        <java.version>17</java.version>
-        <jjwt.version>0.12.5</jjwt.version>
-        <mybatis-plus.version>3.5.8</mybatis-plus.version>
-        <hutool.version>5.8.25</hutool.version>
-        <lombok.version>1.18.34</lombok.version>
-    </properties>
+            <java.version>17</java.version>
+            <jjwt.version>0.12.5</jjwt.version>
+            <mybatis-plus.version>3.5.8</mybatis-plus.version>
+            <hutool.version>5.8.25</hutool.version>
+            <lombok.version>1.18.34</lombok.version>
+            <knife4j.version>4.5.0</knife4j.version>
+        </properties>
 
     <dependencies>
         <!-- Spring Boot Web -->
@@ -122,6 +123,13 @@
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
             <version>3.0.2</version>
+        </dependency>
+
+        <!-- Knife4j：OpenAPI3 接口文档（基于 springdoc，中文增强 UI + 接口调试） -->
+        <dependency>
+            <groupId>com.github.xiaoymin</groupId>
+            <artifactId>knife4j-openapi3-jakarta-spring-boot-starter</artifactId>
+            <version>${knife4j.version}</version>
         </dependency>
     </dependencies>
 
