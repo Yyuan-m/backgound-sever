@@ -1,11 +1,12 @@
 package com.car.rental.module.statistics.service;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.car.rental.common.result.PageResult;
 import com.car.rental.entity.Reconciliation;
 
 public interface ReconciliationService {
 
-    IPage<Reconciliation> getPageList(Integer pageNum, Integer pageSize, String keyword, String status);
+    /** 分页查询 + summary（筛选结果租金/费用/净收入合计，不受分页影响） */
+    PageResult<Reconciliation> getPageList(Integer pageNum, Integer pageSize, String keyword, String status);
 
     Reconciliation getById(Long id);
 

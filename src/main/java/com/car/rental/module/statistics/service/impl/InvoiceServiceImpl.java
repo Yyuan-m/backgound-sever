@@ -1,9 +1,11 @@
 package com.car.rental.module.statistics.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.car.rental.common.exception.BusinessException;
+import com.car.rental.common.result.PageResult;
 import com.car.rental.entity.Invoice;
 import com.car.rental.module.statistics.mapper.InvoiceMapper;
 import com.car.rental.module.statistics.service.InvoiceService;
@@ -14,6 +16,9 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +27,7 @@ public class InvoiceServiceImpl implements InvoiceService {
     private final InvoiceMapper invoiceMapper;
 
     @Override
-    public IPage<Invoice> getPageList(Integer pageNum, Integer pageSize, String keyword, String status) {
+    public PageResult<Invoice> getPageList(Integer pageNum, Integer pageSize, String keyword, String status) {
         LambdaQueryWrapper<Invoice> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             wrapper.and(w -> w
@@ -39,7 +44,27 @@ public class InvoiceServiceImpl implements InvoiceService {
         }
         wrapper.orderByDesc(Invoice::getCreatedAt);
         Page<Invoice> page = new Page<>(pageNum, pageSize);
-        return invoiceMapper.selectPage(page, wrapper);
+        IPage<Invoice> result = invoiceMapper.selectPage(page, wrapper);
+
+        // 筛选结果金额总计（不受分页影响）
+        QueryWrapper<Invoice> sumWrapper = new QueryWrapper<>();
+        sumWrapper.select("IFNULL(SUM(amount), 0) as amountTotal");
+        if (StringUtils.hasText(keyword)) {
+            sumWrapper.and(w -> w
+                    .like("order_no", keyword)
+                    .or()
+                    .like("customer_name", keyword)
+                    .or()
+                    .like("invoice_no", keyword)
+                    .or()
+                    .like("title", keyword));
+        }
+        if (StringUtils.hasText(status)) {
+            sumWrapper.eq("status", status);
+        }
+        List<Map<String, Object>> sumList = invoiceMapper.selectMaps(sumWrapper);
+        Map<String, Object> summary = sumList.isEmpty() ? new HashMap<>() : sumList.get(0);
+        return PageResult.of(result, summary);
     }
 
     @Override

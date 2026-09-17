@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "数据统计/仪表盘", description = "仪表盘核心指标、订单与营收趋势、车型分布、热门车辆、复购率与高峰时段等统计数据")
@@ -46,11 +47,13 @@ public class StatisticsController {
         return Result.ok(statisticsService.getVehicleType());
     }
 
-    @Operation(summary = "最新订单（5条）", description = "按创建时间倒序取最新 5 条订单。需要 dashboard:latest-orders 权限")
+    @Operation(summary = "最新订单（5条）", description = "按创建时间倒序取最新 5 条订单，可按订单状态筛选（pending 待支付 / renting 租赁中 / completed 已完成 / cancelled 已取消，可不传表示全部）。需要 dashboard:latest-orders 权限")
     @GetMapping("/latest-orders")
     @RequirePermission("dashboard:latest-orders")
-    public Result<?> getLatestOrders() {
-        return Result.ok(statisticsService.getLatestOrders());
+    public Result<?> getLatestOrders(
+            @io.swagger.v3.oas.annotations.Parameter(description = "订单状态筛选，空表示全部")
+            @RequestParam(required = false) String status) {
+        return Result.ok(statisticsService.getLatestOrders(status));
     }
 
     @Operation(summary = "最新租客（5条）", description = "取最新 5 位租客，含实时聚合的累计消费/订单数，字段与租客列表接口保持一致。需要 dashboard:latest-customers 权限")
@@ -67,11 +70,18 @@ public class StatisticsController {
         return Result.ok(statisticsService.getVehicleHot());
     }
 
-    @Operation(summary = "复购率分布", description = "按客户累计订单数分组统计人数：首次 / 2-3次 / 4-6次 / 7次以上。需要 dashboard:repurchase-data 权限")
+    @Operation(summary = "客户租车次数排行（Top10）", description = "按已完成订单数统计租车次数最多的前 10 名客户，用于玫瑰图展示。需要 dashboard:repurchase-data 权限")
     @GetMapping("/repurchase-data")
     @RequirePermission("dashboard:repurchase-data")
     public Result<?> getRepurchaseData() {
         return Result.ok(statisticsService.getRepurchaseData());
+    }
+
+    @Operation(summary = "优惠券使用统计", description = "库里全部优惠券（含未使用）的使用次数与优惠总金额（仅统计已完成订单），附带券类型与上线状态供前端筛选。需要 dashboard:coupon-usage 权限")
+    @GetMapping("/coupon-usage")
+    @RequirePermission("dashboard:coupon-usage")
+    public Result<?> getCouponUsage() {
+        return Result.ok(statisticsService.getCouponUsage());
     }
 
     @Operation(summary = "高峰时段分布", description = "按 2 小时时段聚合下单量，用于柱状图展示。需要 dashboard:peak-hours 权限")

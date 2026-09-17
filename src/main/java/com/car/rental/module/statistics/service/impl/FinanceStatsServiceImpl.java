@@ -13,6 +13,7 @@ import com.car.rental.mapper.CarInfoMapper;
 import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.module.after_sales.mapper.AfterSalesComplaintMapper;
 import com.car.rental.module.car.mapper.CarMaintenanceMapper;
+import com.car.rental.module.marketing.mapper.MemberCouponMapper;
 import com.car.rental.module.statistics.mapper.CostRecordMapper;
 import com.car.rental.module.statistics.mapper.ReconciliationMapper;
 import com.car.rental.module.statistics.service.FinanceStatsService;
@@ -35,14 +36,16 @@ import java.util.stream.Collectors;
  *
  * 设计原则（统一算法，各模块数据一致）：
  * 1. 营收（净收入）= finance_record 中 type=rental 的 amount 求和
+ *    - 财务流水仅在订单完成时自动生成，营收天然只计已完成订单
  *    - 流水 amount = order.total_amount（实付净额，已扣除优惠券折扣 coupon_discount）
  *    - 净收入 = rent_amount - coupon_discount = total_amount
  * 2. 成本 = cost_record.amount 求和（手工录入的运营/保险成本）
  *          + car_maintenance.cost 求和（维保成本，从车辆维保业务自动派生）
  *          + 车辆租赁成本 = sum(car_info.daily_cost × customer_order.days)（从订单+车辆自动派生）
+ *    - 车辆租赁成本仅统计 status=completed 的已完成订单，未完成（待支付/租赁中/已取消）订单不计入
  * 3. 净利润 = 营收 - 成本
  * 4. 对账数据按月从 finance_record 聚合，避免与流水脱节
- * 5. 车辆成本参考表：列出每辆车的日租/日成本/利润率/累计租赁天数/累计成本
+ * 5. 车辆成本参考表：列出每辆车的日租/日成本/利润率/累计租赁天数/累计成本（均按已完成订单统计）
  */
 @Service
 @RequiredArgsConstructor
@@ -54,6 +57,7 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
     private final ReconciliationMapper reconciliationMapper;
     private final CarInfoMapper carInfoMapper;
     private final CustomerOrderMapper customerOrderMapper;
+    private final MemberCouponMapper memberCouponMapper;
 
     @Override
     public Map<String, Object> getFinanceOverview() {
@@ -299,6 +303,7 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
 
     /**
      * 车辆租赁成本 = sum(car_info.daily_cost × customer_order.days)
+     * 仅统计已完成订单（status=completed），未完成订单不计入成本
      * 通过 join customer_order 和 car_info 计算
      * @param start 开始时间（按 create_time 过滤），null 表示不限
      * @param end 结束时间，null 表示不限
@@ -310,8 +315,9 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
                 .collect(Collectors.toMap(CarInfo::getId,
                         c -> c.getDailyCost() == null ? BigDecimal.ZERO : c.getDailyCost(),
                         (a, b) -> a));
-        // 查询订单
+        // 查询已完成订单
         LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(CustomerOrder::getStatus, "completed");
         if (start != null && end != null) {
             wrapper.between(CustomerOrder::getCreateTime, start, end);
         }
@@ -327,7 +333,7 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
     }
 
     /**
-     * 车辆租赁成本按月聚合（用于利润趋势图）
+     * 车辆租赁成本按月聚合（用于利润趋势图），仅统计已完成订单
      * @return Map<月份, 成本>
      */
     private Map<String, BigDecimal> sumVehicleRentalCostByMonth(int months) {
@@ -338,9 +344,10 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
                 .collect(Collectors.toMap(CarInfo::getId,
                         c -> c.getDailyCost() == null ? BigDecimal.ZERO : c.getDailyCost(),
                         (a, b) -> a));
-        // 查询近 N 月订单
+        // 查询近 N 月已完成订单
         LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
-        wrapper.apply("create_time >= DATE_SUB(NOW(), INTERVAL " + months + " MONTH)")
+        wrapper.eq(CustomerOrder::getStatus, "completed")
+                .apply("create_time >= DATE_SUB(NOW(), INTERVAL " + months + " MONTH)")
                 .isNotNull(CustomerOrder::getCarId);
         List<CustomerOrder> orders = customerOrderMapper.selectList(wrapper);
         for (CustomerOrder order : orders) {
@@ -358,8 +365,10 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
         // 查询所有车辆
         List<CarInfo> cars = carInfoMapper.selectList(
                 new LambdaQueryWrapper<CarInfo>().orderByDesc(CarInfo::getCreatedAt));
-        // 查询所有订单，按 carId 聚合租赁天数
-        List<CustomerOrder> orders = customerOrderMapper.selectList(null);
+        // 查询所有已完成订单，按车辆聚合租赁天数（未完成订单不计入）
+        LambdaQueryWrapper<CustomerOrder> allWrapper = new LambdaQueryWrapper<>();
+        allWrapper.eq(CustomerOrder::getStatus, "completed");
+        List<CustomerOrder> orders = customerOrderMapper.selectList(allWrapper);
         Map<Long, int[]> carRentalDays = new HashMap<>(); // carId -> [totalDays, orderCount]
         for (CustomerOrder order : orders) {
             if (order.getCarId() == null) continue;
@@ -507,13 +516,14 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
             mtCostByDay.put(day, toBigDecimal(m.get("cost")));
         }
 
-        // 按日聚合车辆租赁成本（订单 create_time 按日分组 × daily_cost × days）
+        // 按日聚合车辆租赁成本（订单 create_time 按日分组 × daily_cost × days，仅已完成订单）
         Map<Long, BigDecimal> carCostMap = carInfoMapper.selectList(null).stream()
                 .collect(Collectors.toMap(CarInfo::getId,
                         c -> c.getDailyCost() == null ? BigDecimal.ZERO : c.getDailyCost(),
                         (a, b) -> a));
         LambdaQueryWrapper<CustomerOrder> orderWrapper = new LambdaQueryWrapper<>();
-        orderWrapper.between(CustomerOrder::getCreateTime, start, end)
+        orderWrapper.eq(CustomerOrder::getStatus, "completed")
+                .between(CustomerOrder::getCreateTime, start, end)
                 .isNotNull(CustomerOrder::getCarId);
         List<CustomerOrder> orders = customerOrderMapper.selectList(orderWrapper);
         Map<Integer, BigDecimal> vehicleCostByDay = new HashMap<>();
@@ -604,6 +614,69 @@ public class FinanceStatsServiceImpl implements FinanceStatsService {
         }
         // 按营收降序
         result.sort((a, b) -> ((BigDecimal) b.get("revenue")).compareTo((BigDecimal) a.get("revenue")));
+        return result;
+    }
+
+    @Override
+    public Map<String, Object> getActivityStats(int months) {
+        if (months <= 0) months = 6;
+
+        // 按月聚合领取数量（claim_time 分月）
+        Map<String, Long> claimMap = new LinkedHashMap<>();
+        for (Map<String, Object> row : memberCouponMapper.selectClaimStatsByMonth(months)) {
+            claimMap.put(String.valueOf(row.get("month")),
+                    Long.valueOf(String.valueOf(row.get("claimed"))));
+        }
+
+        // 按月聚合核销数量与优惠金额（use_time 分月，status=used）
+        Map<String, long[]> usageCountMap = new LinkedHashMap<>(); // month -> [usedCount]
+        Map<String, BigDecimal> usageAmountMap = new LinkedHashMap<>();
+        for (Map<String, Object> row : memberCouponMapper.selectUsageStatsByMonth(months)) {
+            String month = String.valueOf(row.get("month"));
+            usageCountMap.put(month, new long[]{Long.parseLong(String.valueOf(row.get("usedCount")))});
+            usageAmountMap.put(month, toBigDecimal(row.get("discountAmount")));
+        }
+
+        // 生成最近 N 个月的连续月份，补全缺失月份（领取/核销无数据的月份填 0）
+        List<Map<String, Object>> monthRows = new ArrayList<>();
+        LocalDate now = LocalDate.now();
+        for (int i = months - 1; i >= 0; i--) {
+            LocalDate m = now.minusMonths(i);
+            String key = String.format("%04d-%02d", m.getYear(), m.getMonthValue());
+            long claimed = claimMap.getOrDefault(key, 0L);
+            long usedCount = usageCountMap.containsKey(key) ? usageCountMap.get(key)[0] : 0L;
+            BigDecimal discountAmount = usageAmountMap.getOrDefault(key, BigDecimal.ZERO);
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("month", key);
+            row.put("claimed", claimed);
+            row.put("usedCount", usedCount);
+            row.put("discountAmount", discountAmount);
+            // 当月核销率 = 当月核销数 / 当月领取数（领取后跨月核销属正常，单月可能 >100%）
+            row.put("usageRate", claimed > 0
+                    ? BigDecimal.valueOf(usedCount * 100.0 / claimed).setScale(1, RoundingMode.HALF_UP)
+                    : BigDecimal.ZERO);
+            monthRows.add(row);
+        }
+
+        // 汇总卡片：统计全部历史的优惠券数据（不受时间范围筛选影响）
+        Long totalClaimed = memberCouponMapper.selectClaimTotal();
+        if (totalClaimed == null) totalClaimed = 0L;
+        Map<String, Object> usageTotal = memberCouponMapper.selectUsageTotal();
+        long totalUsed = usageTotal == null ? 0L : Long.parseLong(String.valueOf(usageTotal.getOrDefault("totalUsed", 0)));
+        BigDecimal totalDiscount = usageTotal == null ? BigDecimal.ZERO : toBigDecimal(usageTotal.get("totalDiscountAmount"));
+
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("totalClaimed", totalClaimed);
+        summary.put("totalUsed", totalUsed);
+        summary.put("totalDiscountAmount", totalDiscount);
+        summary.put("totalUsageRate", totalClaimed > 0
+                ? BigDecimal.valueOf(totalUsed * 100.0 / totalClaimed).setScale(1, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("months", monthRows);
+        result.put("summary", summary);
         return result;
     }
 

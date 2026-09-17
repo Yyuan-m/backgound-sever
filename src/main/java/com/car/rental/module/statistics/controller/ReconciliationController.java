@@ -1,6 +1,5 @@
 package com.car.rental.module.statistics.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.car.rental.common.annotation.LogChanges;
 import com.car.rental.common.annotation.RequirePermission;
 import com.car.rental.common.result.PageResult;
@@ -32,8 +31,7 @@ public class ReconciliationController {
             @Parameter(description = "每页条数") @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @Parameter(description = "关键字模糊匹配") @RequestParam(required = false) String keyword,
             @Parameter(description = "对账状态（pending 待对账 / checked 已对账）") @RequestParam(required = false) String status) {
-        IPage<Reconciliation> page = reconciliationService.getPageList(pageNum, pageSize, keyword, status);
-        return Result.ok(PageResult.of(page));
+        return Result.ok(reconciliationService.getPageList(pageNum, pageSize, keyword, status));
     }
 
     @Operation(summary = "对账记录详情", description = "按 ID 查询单条对账记录，不存在时抛业务异常。需要 finance:reconciliation 权限")

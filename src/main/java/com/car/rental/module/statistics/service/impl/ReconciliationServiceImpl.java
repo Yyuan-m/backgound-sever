@@ -1,9 +1,11 @@
 package com.car.rental.module.statistics.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.car.rental.common.exception.BusinessException;
+import com.car.rental.common.result.PageResult;
 import com.car.rental.entity.Reconciliation;
 import com.car.rental.module.statistics.mapper.ReconciliationMapper;
 import com.car.rental.module.statistics.service.ReconciliationService;
@@ -13,6 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,7 +26,7 @@ public class ReconciliationServiceImpl implements ReconciliationService {
     private final ReconciliationMapper reconciliationMapper;
 
     @Override
-    public IPage<Reconciliation> getPageList(Integer pageNum, Integer pageSize, String keyword, String status) {
+    public PageResult<Reconciliation> getPageList(Integer pageNum, Integer pageSize, String keyword, String status) {
         LambdaQueryWrapper<Reconciliation> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(keyword)) {
             wrapper.like(Reconciliation::getCheckedBy, keyword);
@@ -31,7 +36,22 @@ public class ReconciliationServiceImpl implements ReconciliationService {
         }
         wrapper.orderByDesc(Reconciliation::getDate);
         Page<Reconciliation> page = new Page<>(pageNum, pageSize);
-        return reconciliationMapper.selectPage(page, wrapper);
+        IPage<Reconciliation> result = reconciliationMapper.selectPage(page, wrapper);
+
+        // 筛选结果金额总计（不受分页影响）
+        QueryWrapper<Reconciliation> sumWrapper = new QueryWrapper<>();
+        sumWrapper.select("IFNULL(SUM(rental_income), 0) as rentalIncomeTotal",
+                        "IFNULL(SUM(fees), 0) as feesTotal",
+                        "IFNULL(SUM(net_income), 0) as netIncomeTotal");
+        if (StringUtils.hasText(keyword)) {
+            sumWrapper.like("checked_by", keyword);
+        }
+        if (StringUtils.hasText(status)) {
+            sumWrapper.eq("status", status);
+        }
+        List<Map<String, Object>> sumList = reconciliationMapper.selectMaps(sumWrapper);
+        Map<String, Object> summary = sumList.isEmpty() ? new HashMap<>() : sumList.get(0);
+        return PageResult.of(result, summary);
     }
 
     @Override

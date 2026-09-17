@@ -53,6 +53,16 @@ public class GlobalExceptionHandler {
         return Result.error(Result.ERROR, msg);
     }
 
+    /**
+     * 静态资源不存在（如浏览器自动请求的 /favicon.ico）。
+     * 属正常现象，仅以 debug 级别记录，避免刷 ERROR 日志。
+     */
+    @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
+    public Result<Void> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException e) {
+        log.debug("静态资源不存在: {}", e.getResourcePath());
+        return Result.error(404, "资源不存在");
+    }
+
     @ExceptionHandler(Exception.class)
     public Result<Void> handleException(Exception e) {
         log.error("系统异常: ", e);

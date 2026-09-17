@@ -13,6 +13,7 @@ import com.car.rental.mapper.CarInfoMapper;
 import com.car.rental.mapper.CustomerOrderItemMapper;
 import com.car.rental.mapper.CustomerOrderMapper;
 import com.car.rental.mapper.CustomerInfoMapper;
+import com.car.rental.module.marketing.mapper.MemberCouponMapper;
 import com.car.rental.module.marketing.service.CustomerCouponService;
 import com.car.rental.module.order.service.OrderService;
 import com.car.rental.entity.Invoice;
@@ -47,6 +48,7 @@ public class OrderServiceImpl implements OrderService {
     private final FinanceRecordMapper financeRecordMapper;
     private final CarInfoMapper carInfoMapper;
     private final CustomerInfoMapper customerInfoMapper;
+    private final MemberCouponMapper memberCouponMapper;
 
     @Override
     public IPage<CustomerOrder> getOrderList(long pageNum, long pageSize, String keyword, String status, String startDate, String endDate) {
@@ -126,7 +128,34 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("订单不存在");
         }
         fillOrderItems(java.util.Collections.singletonList(order));
+        fillCouponInfo(order);
         return order;
+    }
+
+    /**
+     * 填充订单使用的优惠券信息（券名称/类型），供订单详情费用信息展示。
+     * 通过 couponUserId 关联 member_coupon → coupon 查券名称，不依赖订单冗余的 couponId。
+     */
+    private void fillCouponInfo(CustomerOrder order) {
+        if (order.getCouponUserId() == null) return;
+        try {
+            Map<String, Object> info = memberCouponMapper.selectCouponInfoById(order.getCouponUserId());
+            if (info == null) return;
+            Object name = info.get("couponName");
+            Object typeName = info.get("couponTypeName");
+            order.setCouponName(name != null ? String.valueOf(name) : null);
+            order.setCouponTypeName(typeName != null ? String.valueOf(typeName) : null);
+            // 兜底回写 coupon_id（历史订单可能缺失，member_coupon 里有权威值）
+            if (order.getCouponId() == null && info.get("coupon_id") != null) {
+                order.setCouponId(Long.valueOf(String.valueOf(info.get("coupon_id"))));
+                CustomerOrder update = new CustomerOrder();
+                update.setId(order.getId());
+                update.setCouponId(order.getCouponId());
+                customerOrderMapper.updateById(update);
+            }
+        } catch (Exception e) {
+            log.warn("订单详情填充优惠券信息失败 orderId={}, couponUserId={}: {}", order.getId(), order.getCouponUserId(), e.getMessage());
+        }
     }
 
     /**
@@ -146,6 +175,13 @@ public class OrderServiceImpl implements OrderService {
         }
         if (order.getCreateTime() == null) {
             order.setCreateTime(LocalDateTime.now());
+        }
+        // 兜底回填 coupon_id：C 端可能只传 couponUserId，从 member_coupon 取权威值
+        if (order.getCouponId() == null && order.getCouponUserId() != null) {
+            Map<String, Object> info = memberCouponMapper.selectCouponInfoById(order.getCouponUserId());
+            if (info != null && info.get("coupon_id") != null) {
+                order.setCouponId(Long.valueOf(String.valueOf(info.get("coupon_id"))));
+            }
         }
         customerOrderMapper.insert(order);
         saveOrderItems(order);

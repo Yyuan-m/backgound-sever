@@ -1,6 +1,5 @@
 package com.car.rental.module.statistics.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.car.rental.common.annotation.LogChanges;
 import com.car.rental.common.annotation.RequirePermission;
 import com.car.rental.common.result.PageResult;
@@ -33,8 +32,7 @@ public class FinanceController {
             @Parameter(description = "关键字：订单号/客户姓名模糊匹配") @RequestParam(required = false) String keyword,
             @Parameter(description = "流水类型（rental 租金收入 / 其他为支出类）") @RequestParam(required = false) String type,
             @Parameter(description = "收支方向：inflow 流入（租金类）/ outflow 流出（非租金类）") @RequestParam(required = false) String direction) {
-        IPage<FinanceRecord> page = financeService.getRecords(pageNum, pageSize, keyword, type, direction);
-        return Result.ok(PageResult.of(page));
+        return Result.ok(financeService.getRecords(pageNum, pageSize, keyword, type, direction));
     }
 
     @Operation(summary = "财务流水详情", description = "按 ID 查询单条财务流水，不存在时抛业务异常。需要 finance:records 权限")
@@ -164,5 +162,13 @@ public class FinanceController {
     @RequirePermission("finance:revenue-summary")
     public Result<?> getVehicleTypeBreakdown() {
         return Result.ok(financeStatsService.getVehicleTypeBreakdown());
+    }
+
+    /** 活动统计：按月聚合优惠券领取数量与核销数量/优惠金额 */
+    @Operation(summary = "活动统计（按月）", description = "按月聚合优惠券领取数量（claim_time 分月）与核销数量/优惠金额（use_time 分月，仅已核销），金额取关联订单优惠券折扣（仅已完成订单，与财务统计口径一致）。需要 finance:revenue-summary 权限")
+    @GetMapping("/activity-stats")
+    @RequirePermission("finance:revenue-summary")
+    public Result<?> getActivityStats(@Parameter(description = "统计月数，默认 6") @RequestParam(defaultValue = "6") Integer months) {
+        return Result.ok(financeStatsService.getActivityStats(months));
     }
 }

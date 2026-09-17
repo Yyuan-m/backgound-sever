@@ -88,6 +88,14 @@ public class CustomerOrder {
     @TableLogic
     private Integer isDelete;
 
+    /** 使用的优惠券名称（查询时从 member_coupon/coupon 关联填充，非持久化） */
+    @TableField(exist = false)
+    private String couponName;
+
+    /** 使用的优惠券类型名称（如 满减/折扣，查询时关联填充，非持久化） */
+    @TableField(exist = false)
+    private String couponTypeName;
+
     /** 车辆明细列表（多车，非持久化字段，查询时关联填充） */
     @TableField(exist = false)
     private List<CustomerOrderItem> items;

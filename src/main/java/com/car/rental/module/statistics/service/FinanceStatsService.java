@@ -47,4 +47,11 @@ public interface FinanceStatsService {
      * 车型收支分析：按车辆类型分组聚合收入/成本/利润/利润率
      */
     List<Map<String, Object>> getVehicleTypeBreakdown();
+
+    /**
+     * 活动统计：按月聚合优惠券领取数量（claim_time 分月）与核销数量/优惠金额（use_time 分月，status=used）
+     * 金额口径与财务统计一致：关联订单 coupon_discount，仅已完成订单
+     * @param months 统计最近 N 个月
+     */
+    Map<String, Object> getActivityStats(int months);
 }

@@ -14,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,7 +27,26 @@ public class FinanceServiceImpl implements FinanceService {
     private final FinanceRecordMapper financeRecordMapper;
 
     @Override
-    public IPage<FinanceRecord> getRecords(Integer pageNum, Integer pageSize, String keyword, String type, String direction) {
+    public PageResult<FinanceRecord> getRecords(Integer pageNum, Integer pageSize, String keyword, String type, String direction) {
+        Page<FinanceRecord> page = new Page<>(pageNum, pageSize);
+        IPage<FinanceRecord> result = financeRecordMapper.selectPage(page, buildRecordWrapper(keyword, type, direction));
+
+        // 筛选结果金额总计（不受分页影响，用于前端合计行）
+        QueryWrapper<FinanceRecord> sumWrapper = new QueryWrapper<>();
+        sumWrapper.select("IFNULL(SUM(CASE WHEN type = 'rental' THEN amount ELSE 0 END), 0) as inflowTotal",
+                        "IFNULL(SUM(CASE WHEN type <> 'rental' THEN amount ELSE 0 END), 0) as outflowTotal");
+        applyRecordFilters(sumWrapper, keyword, type, direction);
+        List<Map<String, Object>> sumList = financeRecordMapper.selectMaps(sumWrapper);
+        Map<String, Object> summary = sumList.isEmpty() ? new HashMap<>() : sumList.get(0);
+        BigDecimal inflow = toBigDecimal(summary.get("inflowTotal"));
+        BigDecimal outflow = toBigDecimal(summary.get("outflowTotal"));
+        summary.put("inflowTotal", inflow);
+        summary.put("outflowTotal", outflow);
+        summary.put("netTotal", inflow.subtract(outflow));
+        return PageResult.of(result, summary);
+    }
+
+    private LambdaQueryWrapper<FinanceRecord> buildRecordWrapper(String keyword, String type, String direction) {
         LambdaQueryWrapper<FinanceRecord> wrapper = new LambdaQueryWrapper<>();
 
         if (StringUtils.hasText(keyword)) {
@@ -44,9 +65,31 @@ public class FinanceServiceImpl implements FinanceService {
             wrapper.ne(FinanceRecord::getType, "rental");
         }
         wrapper.orderByDesc(FinanceRecord::getCreatedAt);
+        return wrapper;
+    }
 
-        Page<FinanceRecord> page = new Page<>(pageNum, pageSize);
-        return financeRecordMapper.selectPage(page, wrapper);
+    /** 对 QueryWrapper 应用与分页查询一致的筛选条件（用于合计查询） */
+    private void applyRecordFilters(QueryWrapper<FinanceRecord> wrapper, String keyword, String type, String direction) {
+        if (StringUtils.hasText(keyword)) {
+            wrapper.and(w -> w
+                    .like("order_no", keyword)
+                    .or()
+                    .like("customer_name", keyword));
+        }
+        if (StringUtils.hasText(type)) {
+            wrapper.eq("type", type);
+        }
+        if ("inflow".equals(direction)) {
+            wrapper.eq("type", "rental");
+        } else if ("outflow".equals(direction)) {
+            wrapper.ne("type", "rental");
+        }
+    }
+
+    private BigDecimal toBigDecimal(Object obj) {
+        if (obj == null) return BigDecimal.ZERO;
+        if (obj instanceof BigDecimal) return (BigDecimal) obj;
+        return new BigDecimal(obj.toString());
     }
 
     @Override

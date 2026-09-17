@@ -1,6 +1,5 @@
 package com.car.rental.module.statistics.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.car.rental.common.annotation.LogChanges;
 import com.car.rental.common.annotation.RequirePermission;
 import com.car.rental.common.result.PageResult;
@@ -32,8 +31,7 @@ public class InvoiceController {
             @Parameter(description = "每页条数") @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @Parameter(description = "关键字：订单号/客户姓名/发票号/抬头模糊匹配") @RequestParam(required = false) String keyword,
             @Parameter(description = "发票状态（pending 待开票 / issued 已开具）") @RequestParam(required = false) String status) {
-        IPage<Invoice> page = invoiceService.getPageList(pageNum, pageSize, keyword, status);
-        return Result.ok(PageResult.of(page));
+        return Result.ok(invoiceService.getPageList(pageNum, pageSize, keyword, status));
     }
 
     @Operation(summary = "发票详情", description = "按 ID 查询单张发票，不存在时抛业务异常。需要 finance:invoice 权限")

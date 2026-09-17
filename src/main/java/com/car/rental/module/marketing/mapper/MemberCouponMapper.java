@@ -69,4 +69,57 @@ public interface MemberCouponMapper extends BaseMapper<MemberCoupon> {
      */
     @Select("SELECT level FROM car_rental_customer.member WHERE id = #{memberId} AND is_delete = 0")
     String selectMemberLevel(@Param("memberId") Long memberId);
+
+    /**
+     * 按用户券记录 ID 查券信息（coupon_id + 券名称/类型），用于订单详情展示优惠券使用信息
+     */
+    @Select("SELECT mc.id, mc.coupon_id, mc.status, " +
+            "c.name AS couponName, c.type_name AS couponTypeName " +
+            "FROM car_rental_customer.member_coupon mc " +
+            "LEFT JOIN car_rental.coupon c ON c.id = mc.coupon_id " +
+            "WHERE mc.id = #{id} LIMIT 1")
+    java.util.Map<String, Object> selectCouponInfoById(@Param("id") Long id);
+
+    /**
+     * 按月统计优惠券领取数量（claim_time 分月，含全部状态：未使用/锁定/已核销）
+     * 用于财务-活动统计 Tab
+     */
+    @Select("SELECT DATE_FORMAT(claim_time, '%Y-%m') AS month, COUNT(*) AS claimed " +
+            "FROM car_rental_customer.member_coupon " +
+            "WHERE is_delete = 0 AND claim_time >= DATE_SUB(NOW(), INTERVAL #{months} MONTH) " +
+            "GROUP BY DATE_FORMAT(claim_time, '%Y-%m')")
+    List<java.util.Map<String, Object>> selectClaimStatsByMonth(@Param("months") int months);
+
+    /**
+     * 按月统计优惠券核销数量与优惠金额（use_time 分月，status=used，
+     * 金额取关联订单 customer_order.coupon_discount，与财务统计口径一致：仅已完成订单）
+     * 用于财务-活动统计 Tab
+     */
+    @Select("SELECT DATE_FORMAT(mc.use_time, '%Y-%m') AS month, COUNT(*) AS usedCount, " +
+            "IFNULL(SUM(o.coupon_discount), 0) AS discountAmount " +
+            "FROM car_rental_customer.member_coupon mc " +
+            "JOIN car_rental.customer_order o ON o.id = mc.order_id AND o.is_delete = 0 " +
+            "WHERE mc.status = 'used' AND mc.is_delete = 0 " +
+            "AND mc.use_time >= DATE_SUB(NOW(), INTERVAL #{months} MONTH) " +
+            "GROUP BY DATE_FORMAT(mc.use_time, '%Y-%m')")
+    List<java.util.Map<String, Object>> selectUsageStatsByMonth(@Param("months") int months);
+
+    /**
+     * 全量统计优惠券累计领取数量（不限时间，含全部状态），用于活动统计汇总卡片
+     */
+    @Select("SELECT COUNT(*) AS totalClaimed " +
+            "FROM car_rental_customer.member_coupon " +
+            "WHERE is_delete = 0")
+    Long selectClaimTotal();
+
+    /**
+     * 全量统计优惠券累计核销数量与优惠金额（不限时间，status=used，
+     * 金额取关联订单 coupon_discount，仅已完成订单），用于活动统计汇总卡片
+     */
+    @Select("SELECT COUNT(*) AS totalUsed, " +
+            "IFNULL(SUM(o.coupon_discount), 0) AS totalDiscountAmount " +
+            "FROM car_rental_customer.member_coupon mc " +
+            "JOIN car_rental.customer_order o ON o.id = mc.order_id AND o.is_delete = 0 " +
+            "WHERE mc.status = 'used' AND mc.is_delete = 0")
+    java.util.Map<String, Object> selectUsageTotal();
 }

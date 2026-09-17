@@ -1,6 +1,5 @@
 package com.car.rental.module.statistics.controller;
 
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.car.rental.common.annotation.LogChanges;
 import com.car.rental.common.annotation.RequirePermission;
 import com.car.rental.common.result.PageResult;
@@ -30,8 +29,7 @@ public class CostController {
             @Parameter(description = "每页条数") @RequestParam(name = "pageSize", defaultValue = "10") Integer pageSize,
             @Parameter(description = "关键字：明细模糊匹配") @RequestParam(required = false) String keyword,
             @Parameter(description = "成本类型") @RequestParam(required = false) String type) {
-        IPage<CostRecord> page = costService.getPageList(pageNum, pageSize, keyword, type);
-        return Result.ok(PageResult.of(page));
+        return Result.ok(costService.getPageList(pageNum, pageSize, keyword, type));
     }
 
     @Operation(summary = "成本记录详情", description = "按 ID 查询单条成本记录。需要 finance:cost 权限")

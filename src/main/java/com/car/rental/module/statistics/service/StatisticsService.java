@@ -16,13 +16,15 @@ public interface StatisticsService {
 
     List<Map<String, Object>> getVehicleType();
 
-    List<CustomerOrder> getLatestOrders();
+    List<CustomerOrder> getLatestOrders(String status);
 
     List<CustomerInfo> getLatestCustomers();
 
     List<Map<String, Object>> getVehicleHot();
 
     List<Map<String, Object>> getRepurchaseData();
+
+    List<Map<String, Object>> getCouponUsage();
 
     List<Map<String, Object>> getPeakHours();
 }

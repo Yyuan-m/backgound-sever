@@ -43,8 +43,7 @@ public class StatisticsServiceImpl implements StatisticsService {
         long totalOrders = customerOrderMapper.selectCount(null);
         dashboard.put("totalOrders", totalOrders);
 
-        long rentingVehicles = carInfoMapper.selectCount(
-                new LambdaQueryWrapper<CarInfo>().eq(CarInfo::getStatus, "rented"));
+        long rentingVehicles = customerOrderMapper.countRentingVehicles();
         dashboard.put("rentingVehicles", rentingVehicles);
 
         long idleVehicles = carInfoMapper.selectCount(
@@ -102,7 +101,7 @@ public class StatisticsServiceImpl implements StatisticsService {
                         .lt(CustomerOrder::getEndDate, LocalDate.now()));
         dashboard.put("overdueOrders", overdueOrders);
 
-        // 出租率
+        // 出租率 = 当前在租车辆数（renting 订单涉及车辆去重） / 总车辆数
         long totalVehicles = carInfoMapper.selectCount(null);
         long renting = rentingVehicles;
         double rentalRate = totalVehicles > 0 ? (double) renting / totalVehicles : 0;
@@ -125,9 +124,10 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public List<Map<String, Object>> getOrderTrend() {
         QueryWrapper<CustomerOrder> wrapper = new QueryWrapper<>();
+        // 订单数统计全部订单；营收仅计已完成订单（SUM total_amount），与财务统计口径一致
         wrapper.select("DATE_FORMAT(create_time, '%Y-%m') as month",
                         "COUNT(*) as orders",
-                        "SUM(total_amount) as revenue")
+                        "SUM(CASE WHEN status = 'completed' THEN total_amount ELSE 0 END) as revenue")
                 .apply("create_time >= DATE_SUB(NOW(), INTERVAL 12 MONTH)")
                 .groupBy("DATE_FORMAT(create_time, '%Y-%m')")
                 .orderByAsc("month");
@@ -154,8 +154,12 @@ public class StatisticsServiceImpl implements StatisticsService {
     }
 
     @Override
-    public List<CustomerOrder> getLatestOrders() {
+    public List<CustomerOrder> getLatestOrders(String status) {
         LambdaQueryWrapper<CustomerOrder> wrapper = new LambdaQueryWrapper<>();
+        // 状态筛选：status 非空时仅返回该状态订单
+        if (status != null && !status.isEmpty()) {
+            wrapper.eq(CustomerOrder::getStatus, status);
+        }
         wrapper.orderByDesc(CustomerOrder::getCreateTime)
                 .last("LIMIT 5");
         return customerOrderMapper.selectList(wrapper);
@@ -182,14 +186,14 @@ public class StatisticsServiceImpl implements StatisticsService {
 
     @Override
     public List<Map<String, Object>> getRepurchaseData() {
-        QueryWrapper<CustomerInfo> wrapper = new QueryWrapper<>();
-        String caseExpr = "CASE WHEN total_orders = 1 THEN '首次' " +
-                "WHEN total_orders BETWEEN 2 AND 3 THEN '2-3次' " +
-                "WHEN total_orders BETWEEN 4 AND 6 THEN '4-6次' " +
-                "ELSE '7次以上' END";
-        wrapper.select(caseExpr + " as name", "COUNT(*) as value")
-                .groupBy(caseExpr).orderByAsc("name");
-        return customerInfoMapper.selectMaps(wrapper);
+        // 客户租车次数 Top 10（仅已完成订单），用于玫瑰图展示每位客户的租车次数
+        return customerOrderMapper.selectCustomerRentalTopN(10);
+    }
+
+    @Override
+    public List<Map<String, Object>> getCouponUsage() {
+        // 库里全部优惠券（含未使用），使用次数与优惠总金额仅统计已完成订单
+        return customerOrderMapper.selectCouponUsage();
     }
 
     @Override
